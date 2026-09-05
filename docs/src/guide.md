@@ -1,7 +1,5 @@
 # Guide
 
-Julia suits this design well: duck typing lets `inCategory` check "is this shaped like a metric space" instead of forcing objects into a fixed type hierarchy, and JIT specialization means each generic function still compiles down to code as fast as a hand-written C++ method per concrete type — a combination neither Python (duck typing, no JIT specialization) nor C++ (specialization, but nominal typing) offers together.
-
 ## Structure of Types
 
 First-class entities in this library are *objects*. Each object belongs to one or more *categories*. Categories are specified by tags which inherit the abstract type `AbstractCategory`. A particular object of type `SomeObject` which belongs to a category `SomeCategory` should overload

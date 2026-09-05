@@ -4,10 +4,7 @@ CurrentModule = JuliaTopology
 
 # JuliaTopology.jl
 
-A Julia library for computational topology: simplicial complexes, chain
-complexes over finite fields, and Betti numbers, built on a
-[category-based object model](guide.md) so new implementations (metric
-spaces, fields, modules, ...) can drop in without touching existing code.
+A Julia library for computational algebraic topology.
 
 ## Installation
 
@@ -22,7 +19,7 @@ Pkg.develop(path="/path/to/JuliaTopology")
 
 ```julia
 using JuliaTopology
-using JuliaTopology.Presets  # sphere, torus, kleinBottle, realProjectivePlane
+using JuliaTopology.Presets  # torus
 
 F = @wrap GenericFiniteField(7) FiniteField
 
