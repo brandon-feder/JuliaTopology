@@ -1,3 +1,7 @@
+# Guide
+
+Julia suits this design well: duck typing lets `inCategory` check "is this shaped like a metric space" instead of forcing objects into a fixed type hierarchy, and JIT specialization means each generic function still compiles down to code as fast as a hand-written C++ method per concrete type — a combination neither Python (duck typing, no JIT specialization) nor C++ (specialization, but nominal typing) offers together.
+
 ## Structure of Types
 
 First-class entities in this library are *objects*. Each object belongs to one or more *categories*. Categories are specified by tags which inherit the abstract type `AbstractCategory`. A particular object of type `SomeObject` which belongs to a category `SomeCategory` should overload
@@ -20,7 +24,7 @@ X = standardizedFunction(
     convert(GenericObject, b),
     ...
 )
-Y = convert(GenericObject, 
+Y = convert(GenericObject,
     standardizedFunction(
         a, b, ...
     )
@@ -29,18 +33,17 @@ Y = convert(GenericObject,
 ```
 Another way of understanding the generic objects in each category is as a reference implementation of the required interface that also serves as a fallback for when further specialized functions are left undefined.
 
-> #### Example
-> 
-> In `./src/MetricSpace/MetricSpace.jl` is described what function need to be overloaded, and the behavior of those function, to be regarded as a metric space.
-> ```
-> nPoints(metricSpace)::Int
-> distance(metricSpace, i::Int, j::Int)::RT
-> ```
-> The generic object for the category of metric spaces is `GenericMetricSpace` defined in `./src/MetricSpace/GenericMetricSpace.jl`, is defined the object `GenericMetricSpace`, which is regarded as an object in the category of metric spaces. For any other object `x` in this category, `Base.convert` should be overloaded
-> ```
-> Base.convert(::Type{GenericMetricSpace}, x)
-> ```
+!!! note "Example"
+    In `./src/MetricSpace/MetricSpace.jl` is described what function need to be overloaded, and the behavior of those function, to be regarded as a metric space.
+    ```julia
+    nPoints(metricSpace)::Int
+    distance(metricSpace, i::Int, j::Int)::RT
+    ```
+    The generic object for the category of metric spaces is `GenericMetricSpace` defined in `./src/MetricSpace/GenericMetricSpace.jl`, which is regarded as an object in the category of metric spaces. For any other object `x` in this category, `Base.convert` should be overloaded
+    ```julia
+    Base.convert(::Type{GenericMetricSpace}, x)
+    ```
 
 In addition to the functions which are required to be overloaded, to every category is associated *standardized functions* which can be defined for arbitrary objects in that category using only the required overloaded functions — the naturality condition above is what makes these well-defined regardless of when conversion to the generic object happens.
 
-The reason for singling out the generic object in each category is that they can serve as a fallback when specialized implementations are not defined. 
+The reason for singling out the generic object in each category is that they can serve as a fallback when specialized implementations are not defined.

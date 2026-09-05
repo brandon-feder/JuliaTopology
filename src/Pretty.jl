@@ -1,3 +1,7 @@
+"""
+Terminal formatting helpers: colored `[INF]`/`[IMP]`/`[SUC]` tags and a
+timestamp string, for status output in scripts and examples.
+"""
 module Pretty
     TIME = () -> rpad(string(Time(now())), 12)
     TAB = "     "

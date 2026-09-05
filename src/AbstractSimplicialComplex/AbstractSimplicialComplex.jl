@@ -18,7 +18,6 @@ element type of the iterator should be a `Tuple{Vararg{Int}}`.
 - `betti(obj, ring, n::Int)::Int` - The n-th Betti number of the complex, computed over `ring`.
 
 """
-
 abstract type AbstractSimplicialComplex <: AbstractCategory end
 
 function dimension(

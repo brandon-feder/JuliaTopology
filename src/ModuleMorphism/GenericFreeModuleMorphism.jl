@@ -1,3 +1,10 @@
+"""
+    GenericFreeModuleMorphism
+
+The generic object for the category `FreeModuleMorphism`. Stores the domain
+and codomain modules and a function giving matrix entries with respect to
+their standard bases.
+"""
 struct GenericFreeModuleMorphism
     domain::ObjectInCategory{GenericFreeModule, FreeModule}
     codomain::ObjectInCategory{GenericFreeModule, FreeModule}

@@ -1,3 +1,9 @@
+"""
+    GenericAbstractSimplicialComplex
+
+The generic object for the category `AbstractSimplicialComplex`. Wraps a
+sorted iterator of simplices, each a `Tuple{Vararg{Int}}` of vertex labels.
+"""
 struct GenericAbstractSimplicialComplex
     simplexIterator
 

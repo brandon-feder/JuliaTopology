@@ -22,12 +22,6 @@ struct NotInCategoryError{T, Cat <: AbstractCategory} <: Exception
     object::T
 end
 
-"""
-    NotInCategoryError{T, Cat}(obj::T)
-
-Constructor for `NotInCategoryError`. 
-"""
-
 function Base.showerror(io::IO, e::NotInCategoryError{T, Cat}) where T where Cat
     print(io, "Object $(e.object) of type $(T) is not in the category $(Cat)")
 end

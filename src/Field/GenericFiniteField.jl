@@ -1,4 +1,9 @@
-struct GenericFiniteField 
+"""
+    GenericFiniteField
+
+The generic object for the category `FiniteField`, backed by a `Nemo.FqField`.
+"""
+struct GenericFiniteField
     order::Int
     field::Nemo.FqField
 

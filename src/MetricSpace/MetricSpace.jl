@@ -10,7 +10,6 @@ Objects in this category have the following interfaces.
 # Standardized Interface
 - `diameter(obj)::Float64` - Diameter of metric space
 """
-
 struct MetricSpace <: AbstractCategory end
 
 # =========================================================
