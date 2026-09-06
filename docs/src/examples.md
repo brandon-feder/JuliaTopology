@@ -62,7 +62,7 @@ for i in 0:dimension(realProjectivePlane)
 end
 ```
 
-Running this prints:
+Running this gives the following.
 
 | Surface       | β over 𝔽₂    | β over 𝔽₃    |
 |:--------------|:-------------|:-------------|
@@ -71,9 +71,3 @@ Running this prints:
 | Klein bottle  | (1, 2, 1)    | (1, 1, 0)    |
 | ℝP²           | (1, 1, 1)    | (1, 0, 0)    |
 
-The sphere and torus have no torsion, so their Betti numbers agree over
-every field. The Klein bottle and ℝP² each carry `ℤ/2` torsion in `H₁`:
-over `𝔽₂` that torsion contributes an extra dimension to the homology
-(bumping `β₁`, and `β₂` in these non-orientable surfaces), while over
-`𝔽₃` — a field of odd characteristic — the `ℤ/2` torsion vanishes and the
-Betti numbers match what you'd get with rational coefficients.
