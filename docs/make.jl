@@ -7,6 +7,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Guide" => "guide.md",
+        "CASL Correspondence" => "casl.md",
         "Examples" => "examples.md",
         "API Reference" => "api.md",
     ],

@@ -1,4 +1,11 @@
 using Test
-using JuliaTopology
+using Random
+using LinearAlgebra
+import Nemo
 
-include("./SimplicialComplex/GenericSimplicialComplex.jl")
+using JuliaTopology
+import JuliaTopology: inCategory
+
+include("Hom.jl")
+include("Lifts.jl")
+include("InCategory.jl")

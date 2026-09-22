@@ -12,7 +12,7 @@ n = size(points, 1)
 f = (i::Int, j::Int) -> view(points, i, :) * view(point, j, :)'
 
 # store as metric space
-metricSpace = @wrap GenericMetricSpace(f, n) MetricSpace
+metricSpace = GenericMetricSpace(f, n)
 
 # access info about metric space
 println("$INF # points: $(nPoints(metricSpace))")

@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "9421d73906607cda0bdd384ff56c0b438553bf24"
+project_hash = "dccacd111963301a10e5d76e82f83811bd1200d7"
 
 [[deps.AbstractAlgebra]]
 deps = ["Compat", "LinearAlgebra", "MacroTools", "PrecompileTools", "Preferences", "Random", "RandomExtensions", "SparseArrays"]
@@ -127,10 +127,21 @@ git-tree-sha1 = "25cc3803f1030ab855e383129dcd3dc294e322cc"
 uuid = "6add18c4-b38d-439d-96f6-d6bc489c04c5"
 version = "0.1.3"
 
+[[deps.Crayons]]
+git-tree-sha1 = "54b76cbb40d9a0f5368c880725b2f141da77c94f"
+uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+version = "4.2.0"
+
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
+
+[[deps.DataStructures]]
+deps = ["OrderedCollections"]
+git-tree-sha1 = "b0bc6d2cad1fed8b7fd59a1551a991cb3d2809e6"
+uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+version = "0.19.6"
 
 [[deps.DataValueInterfaces]]
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
@@ -169,11 +180,6 @@ deps = ["ContextVariablesX"]
 git-tree-sha1 = "656f7a6859be8673bf1f35da5670246b923964f7"
 uuid = "b9860ae5-e623-471e-878b-f6a53c775ea6"
 version = "0.1.1"
-
-[[deps.FunctionWrappers]]
-git-tree-sha1 = "d62485945ce5ae9c0c48f124a84998d755bae00e"
-uuid = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
-version = "1.1.3"
 
 [[deps.Future]]
 deps = ["Random"]
@@ -222,7 +228,7 @@ uuid = "ac6e5ff7-fb65-4e79-a425-ec3bc9c03011"
 version = "1.12.0"
 
 [[deps.JuliaTopology]]
-deps = ["AbstractAlgebra", "FunctionWrappers", "LinearAlgebra", "Nemo"]
+deps = ["AbstractAlgebra", "Crayons", "DataStructures", "FLoops", "LinearAlgebra", "Nemo", "Random", "Transducers"]
 path = "."
 uuid = "60dc11a6-447a-439d-a0aa-3710eaf07cd2"
 version = "0.1.0"

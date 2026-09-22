@@ -3,12 +3,12 @@ using JuliaTopology.Pretty
 using JuliaTopology.Presets: sphere, torus, kleinBottle, realProjectivePlane
 
 # shorthand
-ASC = AbstractSimplicialComplex
+ASC = ThAbstractSimplicialComplex
 GenericASC = GenericAbstractSimplicialComplex
 
 # define rings
-F2 = @wrap GenericFiniteField(2) FiniteField
-F3 = @wrap GenericFiniteField(3) FiniteField
+F2 = GenericGaloisField(2)
+F3 = GenericGaloisField(3)
 
 println("$INF Homology of a sphere")
 println("$INF$TAB over 𝔽₂")
