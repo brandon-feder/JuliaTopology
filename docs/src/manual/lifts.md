@@ -4,6 +4,10 @@ CurrentModule = JuliaTopology
 
 # Lifts between categories
 
+!!! note
+    `Lifts` is not currently included in the package; this page describes its
+    planned design.
+
 `Lifts` is a global registry of forgetful functors, letting an object
 of one category be converted ("lifted") into another along a chain of
 registered conversions.

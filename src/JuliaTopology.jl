@@ -18,11 +18,16 @@ include("categories/FinCard.jl")
 include("categories/FinSet.jl")
 include("categories/MorphFinSet.jl")
 include("categories/Point.jl")
+include("categories/FreeCat.jl")
 # include("categories/MorphFinCard.jl")
 
 include("functors/SetCardEquiv.jl")
 include("functors/Basic.jl")
+include("categories/FunctorCat.jl")
+include("functors/Diagram.jl")
 include("categories/Comma.jl")
+include("categories/Cone.jl")
+include("categories/LimitsFinSet.jl")
 
 
 # =========================================================
@@ -41,13 +46,20 @@ export Hom, Epi, Mono, Iso
 
 # Particular Implementations
 export CatPoint, Point, MorphPoint, FuncIdentity, FuncConstant
+export FunctorCat, MorphNat, FuncDiagram, FuncDiagonal, diagram, diagonal,
+    parallelPair, cospan, span, discrete
+export FreeCat, MorphFreeCat, generator, discreteShape, emptyShape,
+    parallelPairShape, cospanShape, spanShape
 export Comma, ↓, ObjComma, MorphComma, source, target, arrow,
     Slice, Coslice, terminal, initial
+export Cone, Cocone, apex, legs, leg
+export LimitSet, CoproductSet, QuotientSet, limit, colimit, product, coproduct,
+    equalizer, coequalizer, pullback, pushout
 export FuncFinCardToSet, FuncFinSetToCard, Lifts, Cat, CatCat, FinCard, CatFinCard, 
     GenericMorphFinSet, GenericMorphFinCard, FinCat, FinMap, FinSet, CatFinSet
 
 # Methods On OICs/Categories
-export compose, id, domain, codomain, cardinality, canonicalHom, areIsomorphic,
+export compose, id, firstDifference, domain, codomain, cardinality, canonicalHom, areIsomorphic,
     canLift, lift
 
 # Misc

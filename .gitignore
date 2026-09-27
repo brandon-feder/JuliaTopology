@@ -1,5 +1,5 @@
 docs/build/
-docs/src/examples/
+docs/src/tutorials/
 docs/Manifest.toml
 *.jl.cov
 *.jl.*.cov

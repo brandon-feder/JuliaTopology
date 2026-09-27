@@ -88,10 +88,14 @@ function cardinality(
     return length(object(oic))
 end
 
+# the elements are wrapped; when the elements of `T` are not of one concrete
+# type, neither are the wrapped ones
 function Base.eltype(
     oic::OIC{T, CatFinSet}
 ) where T
-    return OIC{Base.eltype(T), OICAsCat{T, CatFinSet}}
+    E = Base.eltype(T)
+    return isconcretetype(E) ? OIC{E, OICAsCat{T, CatFinSet}} :
+        OIC{<:E, OICAsCat{T, CatFinSet}}
 end
 
 # =========================================================

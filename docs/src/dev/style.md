@@ -53,7 +53,7 @@
     the same check.
 * Every exported name must have a docstring attached directly to it, not only
     mentioned in the prose of another docstring — this is what lets
-    `@autodocs` render it under [API Reference](api.md). A function with many
+    `@autodocs` render it under the API Reference. A function with many
     per-category methods and no single canonical one gets a documented stub:
     ```julia
     """
@@ -93,7 +93,7 @@
     e.g. `CatFinSet`/`CatFinCard` decide it from `cardinality` alone.
 * Plain `==`/`hash`, where overloaded at all, should stay strict identity
     unless a category has a specific, well-understood reason to make it
-    extensional (see the "Equality" note in [The category FinSet](finset-category.md)
+    extensional (see the "Equality" note in [The category FinSet](@ref)
     for why `FinSet` itself does not).
 
 ## Membership

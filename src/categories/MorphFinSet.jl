@@ -252,6 +252,24 @@ function Base.:∘(
 end
 
 """
+    firstDifference(f, g)
+
+For maps `f, g: X → Y` of finite sets, `nothing` when they agree on every
+element of `X`, and otherwise `(at = x, left = f(x), right = g(x))` for the
+first element `x` where they differ.
+"""
+function firstDifference(
+    f::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}},
+    g::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}}
+)
+    for x in domain(category(f))
+        fx, gx = f(x), g(x)
+        fx != gx && return (at = x, left = fx, right = gx)
+    end
+    return nothing
+end
+
+"""
     id(X::OIC{<:Any, CatFinSet})
 
 The identity map of the finite set `X`, in `Iso(X, X)`.

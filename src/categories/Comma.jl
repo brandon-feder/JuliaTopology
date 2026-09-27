@@ -230,33 +230,44 @@ function checkInCategory(
         ))
     end
 
-    # commutativity can only be checked pointwise, over FinSet
+    # commutativity can only be checked when the morphisms of `C` can be
+    # composed and compared
     C = object(codomain(category(K.F)))
-    if !(C isa CatFinSet)
+    Gβ, Fα = K.G(β), K.F(α)
+    comparable =
+        hasmethod(compose, Tuple{typeof(Gβ), typeof(dom.arrow)}) &&
+        hasmethod(compose, Tuple{typeof(cod.arrow), typeof(Fα)})
+    if comparable
+        lhs, rhs = compose(Gβ, dom.arrow), compose(cod.arrow, Fα)
+        comparable = hasmethod(firstDifference, Tuple{typeof(lhs), typeof(rhs)})
+    end
+    if !comparable
         throw(NotInCategory(morph, H,
             @annotated """
-            Whether a morphism of $K commutes can only be checked when its \
-            functors land in $FinSet, but they land in $C. If you know it \
-            commutes, you may skip the check with `force=true`.
+            Whether a morphism of $K commutes can only be checked when the \
+            morphisms of $C can be composed and compared (with \
+            $(codeclr("compose")) and $(codeclr("firstDifference"))), \
+            which they cannot. If you know it commutes, you may skip the \
+            check with `force=true`.
             """
         ))
     end
 
-    # `G(β) ∘ h == h′ ∘ F(α)`, pointwise
-    Gβ, Fα = K.G(β), K.F(α)
-    for x in domain(category(dom.arrow))
-        lhs, rhs = Gβ(dom.arrow(x)), cod.arrow(Fα(x))
-        if lhs != rhs
-            throw(NotInCategory(morph, H,
-                @annotated """
-                The morphism $(objclr(name(OIC(morph, H; force=true)))) is \
-                not in $H, since it does not commute: the element \
-                $(objclr(name(x))) is sent to $(objclr(name(lhs))) by \
-                $(codeclr("G(β) ∘ h")) but to $(objclr(name(rhs))) by \
-                $(codeclr("h′ ∘ F(α)")).
-                """
-            ))
-        end
+    # `G(β) ∘ h == h′ ∘ F(α)`
+    difference = firstDifference(lhs, rhs)
+    if difference !== nothing
+        throw(NotInCategory(morph, H,
+            @annotated """
+            The morphism $(objclr(name(OIC(morph, H; force=true)))) is not \
+            in $H, since it does not commute: the element \
+            $(difference.at isa Tuple ?
+                @annotated("$(objclr(name(difference.at[2]))) of \
+                    $(valclr(difference.at[1]))") :
+                objclr(name(difference.at))) is sent to \
+            $(objclr(name(difference.left))) by $(codeclr("G(β) ∘ h")) but \
+            to $(objclr(name(difference.right))) by $(codeclr("h′ ∘ F(α)")).
+            """
+        ))
     end
 
     return true

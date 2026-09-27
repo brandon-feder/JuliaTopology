@@ -210,6 +210,16 @@ applying `f` first. Each implementation of morphisms overloads it for its own.
 function compose end
 
 """
+    firstDifference(f, g)
+
+Compare morphisms `f` and `g` with the same domain and codomain: `nothing` when
+they agree, and otherwise the first place they differ, as `(at, left, right)`,
+where `f` gives `left` and `g` gives `right` at `at`. Each implementation of
+morphisms overloads it for its own.
+"""
+function firstDifference end
+
+"""
     id(X)
 
 The identity morphism of the object `X`, in `Iso(X, X)`. Each category

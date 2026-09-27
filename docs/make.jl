@@ -7,13 +7,19 @@ using JuliaTopology
 # 256 terminal colors
 ENV["COLORTERM"] = "truecolor"
 
-# Turn each script in `examples/` into a page of `docs/src/examples/`, whose
-# code Documenter runs while building, showing its output
+# Turn each script in `examples/` into a tutorial page of `docs/src/tutorials/`,
+# whose code Documenter runs while building, showing its output. Scripts in
+# `tutorialOrder` come first, then any others alphabetically.
+tutorialOrder = ["getting-started.jl", "comma.jl", "limits.jl", "errors.jl"]
 examplesDir = joinpath(@__DIR__, "..", "examples")
-generatedDir = joinpath(@__DIR__, "src", "examples")
-examples = sort(filter(endswith(".jl"), readdir(examplesDir)))
-for file in examples
-    Literate.markdown(joinpath(examplesDir, file), generatedDir;
+tutorialsDir = joinpath(@__DIR__, "src", "tutorials")
+scripts = filter(endswith(".jl"), readdir(examplesDir))
+tutorials = [
+    filter(in(scripts), tutorialOrder);
+    sort(filter(!in(tutorialOrder), scripts))
+]
+for file in tutorials
+    Literate.markdown(joinpath(examplesDir, file), tutorialsDir;
         documenter=true, credit=false)
 end
 
@@ -23,17 +29,33 @@ makedocs(
     format = Documenter.HTML(ansicolor=true),
     pages = [
         "Home" => "index.md",
-        "Guide" => "guide.md",
-        "Categories" => "category.md",
-        "Homs Between Categories" => "hom.md",
-        "Lifts Between Categories" => "lifts.md",
-        "The category FinSet" => "finset-category.md",
-        "Finite Sets as Categories" => "finset-elements.md",
-        "Morphisms of FinSet and FinCard" => "finset-morphisms.md",
-        "Comma Categories" => "comma.md",
-        "Examples" => [joinpath("examples", replace(file, ".jl" => ".md"))
-            for file in examples],
-        "API Reference" => "api.md",
+        "Tutorials" => [joinpath("tutorials", replace(file, ".jl" => ".md"))
+            for file in tutorials],
+        "Manual" => [
+            "Objects and categories" => "manual/objects.md",
+            "Morphisms" => "manual/morphisms.md",
+            "Finite sets" => [
+                "The category FinSet" => "manual/finset.md",
+                "Elements of a set" => "manual/finset-elements.md",
+                "Maps of finite sets" => "manual/finset-morphisms.md",
+            ],
+            "Comma categories" => "manual/comma.md",
+            "Limits and colimits" => "manual/limits.md",
+            "Lifts (disabled)" => "manual/lifts.md",
+        ],
+        "API Reference" => [
+            "Core" => "api/core.md",
+            "Finite sets" => "api/finite-sets.md",
+            "Functors and comma categories" => "api/functors.md",
+            "Limits and colimits" => "api/limits.md",
+            "Printing and settings" => "api/printing.md",
+        ],
+        "Developer Docs" => [
+            "Design guide" => "dev/design.md",
+            "Style guide" => "dev/style.md",
+            "Writing docs and examples" => "dev/writing-docs.md",
+            "Review checklist" => "dev/review-checklist.md",
+        ],
     ],
 )
 
