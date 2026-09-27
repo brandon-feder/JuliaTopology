@@ -5,20 +5,22 @@ authors = ["Brandon Feder <koala@brandonfeder.com>"]
 
 [deps]
 AbstractAlgebra = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
-Crayons = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 FLoops = "cc61a311-1640-44b5-9fba-1b764f453329"
+JuliaSyntaxHighlighting = "ac6e5ff7-fb65-4e79-a425-ec3bc9c03011"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 
 [compat]
 AbstractAlgebra = "0.50.2"
-Crayons = "4.2.0"
 DataStructures = "0.19.6"
 FLoops = "0.2.2"
+JuliaSyntaxHighlighting = "1.12.0"
 LinearAlgebra = "1.12.0"
 Nemo = "0.56.1"
 Random = "1.11.0"
+StyledStrings = "1.11.0"
 Transducers = "0.4.85"

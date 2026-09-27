@@ -1,23 +1,54 @@
 """
-    struct CatFinCard
+    CatFinCard()
 
-The category of finite cardinals; The skeleton of FinSet.
-The objects in this category are integers. New objects
-should not be associated with this, and so no required interface
-is provided.
-
-# Standardized Interface
-- `cardinality(OIC{Int, CatFinCard})::Int` - The cardinality
+The category of finite cardinals. Its global instance is [`FinCard`](@ref).
 """
 struct CatFinCard <: Category end
+
+"""
+    FinCard
+
+The global instance of [`CatFinCard`](@ref), the category of finite cardinals.
+"""
 FinCard = CatFinCard()
 
-JuliaTopology.inCategory(::Int, ::CatFinCard) = true
-JuliaTopology.checkInterface(::Int, ::CatFinCard) = true
+# =========================================================
+# ================== REQUIRED INTERFACE ===================
+# =========================================================
 
-JuliaTopology.cardinality(card::OIC{Int, CatFinCard}) = object(card)
+function checkInCategory(n::Int, cat::CatFinCard)
+    n >= 0 || throw(NotInCategory(n, cat,
+        @annotated """
+        The value
+        $TAB$(valclr(n))
+        is not an object of $cat, since finite cardinals must be \
+        non-negative.
+        """
+    ))
+    return true
+end
 
-JuliaTopology.areIsomorphic(
+function checkInCategory(obj, Cat::CatFinCard)
+    throw(NotInCategory(obj, Cat,
+        @annotated """
+        The value
+        $TAB$(valclr(obj))
+        is not an object of $Cat, since the objects of $Cat are the \
+        non-negative values of type $(dtclr("Int")), and it is a \
+        $(dtclr(typeString(typeof(obj)))).
+        """
+    ))
+end
+
+checkInterface(::Int, ::CatFinCard) = true
+
+# =========================================================
+# ================ STANDARDIZED INTERFACE =================
+# =========================================================
+
+cardinality(card::OIC{Int, CatFinCard}) = object(card)
+
+areIsomorphic(
     cardA::OIC{Int, CatFinCard}, 
     cardB::OIC{Int, CatFinCard}
 ) = (cardinality(cardA) == cardinality(cardB))
@@ -26,4 +57,9 @@ JuliaTopology.areIsomorphic(
     cardA::OIC{Int, CatFinCard}, 
     cardB::OIC{Int, CatFinCard}
 ) = areIsomorphic(cardA, cardB)
-JuliaTopology.name(::CatFinCard) = "FinCard"
+
+# =========================================================
+# ======================= PRINTING ========================
+# =========================================================
+
+name(::CatFinCard) = "FinCard"

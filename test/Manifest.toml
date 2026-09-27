@@ -127,11 +127,6 @@ git-tree-sha1 = "25cc3803f1030ab855e383129dcd3dc294e322cc"
 uuid = "6add18c4-b38d-439d-96f6-d6bc489c04c5"
 version = "0.1.3"
 
-[[deps.Crayons]]
-git-tree-sha1 = "54b76cbb40d9a0f5368c880725b2f141da77c94f"
-uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
-version = "4.2.0"
-
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
@@ -228,7 +223,7 @@ uuid = "ac6e5ff7-fb65-4e79-a425-ec3bc9c03011"
 version = "1.12.0"
 
 [[deps.JuliaTopology]]
-deps = ["AbstractAlgebra", "Crayons", "DataStructures", "FLoops", "LinearAlgebra", "Nemo", "Random", "Transducers"]
+deps = ["AbstractAlgebra", "DataStructures", "FLoops", "JuliaSyntaxHighlighting", "LinearAlgebra", "Nemo", "Random", "StyledStrings", "Transducers"]
 path = ".."
 uuid = "60dc11a6-447a-439d-a0aa-3710eaf07cd2"
 version = "0.1.0"

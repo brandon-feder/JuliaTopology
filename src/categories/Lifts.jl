@@ -7,7 +7,7 @@ objects-in-"super-categories".
 """
 struct CatLifts <: Category
     liftRegistry::Vector{
-        ObjectInCategory{F, Hom{D, C, CatCat}} 
+        OIC{F, Hom{D, C, CatCat}} 
             where {F, D<:Category, C<:Category}
     }
 end
@@ -28,7 +28,7 @@ Register a functor (a morphism between objects in `Cat`) as a lift.
 """
 function Base.push!(
     lifts::CatLifts, 
-    morphism::ObjectInCategory{F, Hom{D, C, CatCat}} 
+    morphism::OIC{F, Hom{D, C, CatCat}} 
 ) where {F, D<:Category, C<:Category}
     push!(lifts.liftRegistry, morphism)
     return lifts
@@ -96,13 +96,13 @@ functor is re-validated by the `ObjectInCategory` constructor, as is the final
 object, which catches functors that produce invalid objects. Pass `force=true`
 to skip those checks.
 """
-function lift(oic::ObjectInCategory, sup::Category; force::Bool=false)
+function lift(oic::OIC, sup::Category; force::Bool=false)
     path = _liftPath(oic.category, sup)
     path === nothing && error("lift: no registered lift path from $(oic.category) to $sup")
 
     current = oic
     for (functor, nextCategory) in path
-        current = ObjectInCategory(functor(current), nextCategory; force=force)
+        current = OIC(functor(current), nextCategory; force=force)
     end
     return current
 end
@@ -113,4 +113,4 @@ end
 Syntactic sugar to write `C[oic]` for `lift(oic, C)`; `force` is passed on to
 [`lift`](@ref).
 """
-Base.getindex(C::Category, oic::ObjectInCategory; force::Bool=false) = lift(oic, C; force=force)
+Base.getindex(C::Category, oic::OIC; force::Bool=false) = lift(oic, C; force=force)

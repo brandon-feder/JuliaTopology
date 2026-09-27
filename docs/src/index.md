@@ -5,8 +5,8 @@ contradictions. It is only a guide for making design decisions. The details
 of this guide are constantly changing and in development as this package
 distills itself in my mind.
 
-1. Structure comes from morphisms from cononical forms.
-    * By cononical form, we refer to a unique representative from an isomorphism
+1. Structure comes from morphisms from canonical forms.
+    * By canonical form, we refer to a unique representative from an isomorphism
         class in each category with a well understood structure and easy-to-compute-with 
         presentation.
     * It is not that object do/do not belong to a category in an objective sense.
@@ -20,7 +20,7 @@ distills itself in my mind.
         when we say an object belongs in a category, we mean that there is an obvious
         map to some canonical form in that category. If there is not an obvious morphism,
         then a warning may be thrown, but not an error.
-    * Cononical forms themselves are what provide a tangible interface for a category. For
+    * Canonical forms themselves are what provide a tangible interface for a category. For
         example, every object in the category finite of groups has a well-defined order.
         Lets say I have an object `ℤ₂₄` in the category of groups which represents the unique
         cyclic group of order 24. I would like the function `order(ℤ₂₄)` to be overloaded and return 
@@ -31,7 +31,7 @@ distills itself in my mind.
         In practice, this is useful for allowing many different implementations
         of the same object to be comparable in a standardized way. For example, if I want to store 
         a matrix as a data-type `SparseMatrixCSC` or simply as `Matrix`, and they both have an isomorphism
-        from the same cononical form, then I can consider them the same matrix (within context of the category they
+        from the same canonical form, then I can consider them the same matrix (within context of the category they
         are regarded as belonging to)
     * This is inspired by the Yoneda embedding: The structure of a "reasonable category" comes from morphisms between
         objects in that category, not the object themselves.

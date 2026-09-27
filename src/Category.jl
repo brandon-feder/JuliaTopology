@@ -9,22 +9,6 @@ Abstract type to be subtyped by categories.
 """
 abstract type Category end
 
-function coloredPrint(
-    cat::Category; depth::Int=0, catdt=false,
-)
-    # add category name
-    catname = catclr(name(cat))
-    res = "$catname"
-
-    # add data type if needed
-    if catdt
-        dtname = dtclr(string(typeof(cat)))
-        res *= " :: $dtname"
-    end
-
-    return res
-end
-
 # =========================================================
 # ================ OBJECTS IN CATEGORIES  =================
 # =========================================================
@@ -36,9 +20,7 @@ Wrap an object and category into a single unit.
 
 By default the constructor validates the object with
 [`checkInCategory`](@ref) and [`checkInterface`](@ref). Pass `force=true` to
-skip both checks, which avoids their cost when the caller already knows the
-object is valid. An invalid object built this way is not detected, so later
-operations on it may fail or return wrong results.
+skip both checks.
 """
 struct ObjectInCategory{ObjT, CatT}
     object::ObjT
@@ -75,15 +57,6 @@ Alias for [`ObjectInCategory`](@ref).
 const OIC = ObjectInCategory
 
 """
-    inCategory(obj, Cat::Category)
-
-Check whether an object belongs in a particular category.
-This needs to be overloaded by particular categories in 
-order to call `ObjectInCategory()`.
-"""
-inCategory(obj, Cat::Category) = false
-
-"""
     struct NotInCategory <: Exception
 
 Thrown by [`checkInCategory`](@ref) when `object` does not belong to `category`.
@@ -92,45 +65,149 @@ Thrown by [`checkInCategory`](@ref) when `object` does not belong to `category`.
 struct NotInCategory <: Exception
     object
     category
-    reason::String
+    reason::AbstractString
 end
 
 function Base.showerror(io::IO, e::NotInCategory)
-    print(io, "NotInCategory: object::", typeof(e.object),
-        " is not in category::", typeof(e.category), ": ", e.reason)
+    print(io, "NotInCategory: ", e.reason)
 end
 
 """
     checkInCategory(obj, Cat::Category)
 
 Check whether an object belongs in a particular category, returning `true`
-if it does. This generic fallback is `@assert inCategory(obj, Cat)`, so a
-failure carries no explanation. Categories may overload it to throw a
-[`NotInCategory`](@ref) with an informative reason instead; an overload
-should agree with `inCategory` on which objects pass.
+if it does, and throwing a [`NotInCategory`](@ref) explaining why otherwise.
+This is the sole membership check a category needs to overload. This generic
+fallback always throws a `NotInCategory` error.
 """
 function checkInCategory(obj, Cat::Category)
-    @assert inCategory(obj, Cat)
-    return true
+    throw(NotInCategory(obj, Cat,
+        @annotated """
+        The value
+        $TAB$(valclr(obj))
+        cannot be regarded as an object of $Cat, since $Cat does not say \
+        whether values of type $(dtclr(typeString(typeof(obj)))) are among \
+        its objects. Most likely they are not meant to be. If they are, you \
+        may say so by overloading
+        $(overloadHint("checkInCategory",
+            ("obj", @annotated("any value of type \
+                $(dtclr(typeString(typeof(obj))))"), typeString(typeof(obj))),
+            ("cat", @annotated("the category $Cat"), typeString(typeof(Cat))),
+        ))
+        or skip the check for this one value with `force=true`.
+        """
+    ))
 end
 
 function Base.showerror(io::IO, e::InterfaceViolation)
-    print(io, "InterfaceViolation: object::", typeof(e.object),
-        " does not satisfy the interface of category::", typeof(e.category),
-        ": ", e.reason)
+    print(io, "InterfaceViolation: ", e.reason)
 end
 
 """
-    requireMethod(object, category, f, argtypes)
+    @checkMethod object category f argtypes
 
-Throw an [`InterfaceViolation`](@ref) unless `f` has a method for
-`argtypes`. Meant for use inside `checkInterface` overloads.
+Throw an [`InterfaceViolation`](@ref) unless the function `f` is defined and
+has a method for `argtypes`. Here `f` must be a name such as `cardinality` or
+`Base.getindex`. Meant for use inside `checkInterface` overloads.
 """
-function requireMethod(object, category, f, argtypes::Type{<:Tuple})
-    hasmethod(f, argtypes) || throw(InterfaceViolation(object, category,
-        "missing required method `$(nameof(f))` for argument types " *
-        "$(argtypes)"))
-    return true
+macro checkMethod(object, category, f, argtypes)
+    fname = string(f)
+    isdefinedexpr = if f isa Symbol
+        :(isdefined($__module__, $(QuoteNode(f))))
+    elseif Meta.isexpr(f, :., 2) && f.args[2] isa QuoteNode
+        :(isdefined($(esc(f.args[1])), $(f.args[2])))
+    else
+        throw(ArgumentError(
+            "@checkMethod expects a function name, got `$f`"))
+    end
+    return quote
+        local obj = $(esc(object))
+        local cat = $(esc(category))
+        local types = $(esc(argtypes))
+        local defined = $isdefinedexpr
+        if !(defined && hasmethod($(esc(f)), types))
+            local params = [T isa TypeVar ? T.ub : T
+                for T in Base.unwrap_unionall(types).parameters]
+            local hint = overloadHint($fname,
+                (("x$i", describeArgType(T, cat), typeString(T))
+                    for (i, T) in enumerate(params))...,
+            )
+            local problem = defined ? "which is missing for" :
+                "but no function `$($fname)` is defined, so it is missing for"
+            throw(InterfaceViolation(
+                @annotated """
+                The category $cat requires the method `$($fname)` of its \
+                objects, $problem
+                $TAB$(valclr(obj)).
+                When appropriate, you may define it by overloading
+                $hint
+                or skip the check for this one value with `force=true`.
+                """
+            ))
+        end
+        true
+    end
+end
+
+# Signatures of generic methods which only throw an error explaining that
+# something is not implemented, e.g. applying a morphism to an element. Finding
+# one of these does not count as being callable in `@checkCallable`.
+const FALLBACK_SIGNATURES = Type[]
+
+# Whether calling with argument types `sig` has a method other than a fallback
+function hasNonFallbackMethod(sig)
+    Core._hasmethod(sig) || return false
+    method = try
+        which(sig)
+    catch
+        return true  # ambiguous, but not solely a fallback
+    end
+    return !(method.sig in FALLBACK_SIGNATURES)
+end
+
+"""
+    @checkCallable object category argtypes
+
+Throw an [`InterfaceViolation`](@ref) unless `object`, once wrapped as an
+`ObjectInCategory{typeof(object), typeof(category)}`, is callable with arguments
+of types `argtypes`, other than by a generic fallback which only throws. The
+check is on types since the wrapper does not exist yet when `checkInterface`
+runs. Meant for use inside `checkInterface` overloads.
+"""
+macro checkCallable(object, category, argtypes)
+    return quote
+        local obj = $(esc(object))
+        local cat = $(esc(category))
+        local types = $(esc(argtypes))
+        local wrapped = OIC{typeof(obj), typeof(cat)}
+        local sig = Base.rewrap_unionall(
+            Tuple{wrapped, Base.unwrap_unionall(types).parameters...}, types)
+        if !hasNonFallbackMethod(sig)
+            local params = [T isa TypeVar ? T.ub : T
+                for T in Base.unwrap_unionall(types).parameters]
+            local argnames = ["x$i" for i in eachindex(params)]
+            local hint = overloadHint(nothing,
+                ("f", @annotated("any object of $cat represented by values of type \
+                    $(dtclr(typeString(typeof(obj))))"),
+                    typeString(wrapped)),
+                ((argnames[i], describeArgType(T, cat), typeString(T))
+                    for (i, T) in enumerate(params))...,
+            )
+            local call = codeclr("f($(join(argnames, ", ")))")
+            throw(InterfaceViolation(
+                @annotated """
+                The category $cat requires its objects to be callable as \
+                $call, but the type $(dtclr(typeString(typeof(obj)))) does \
+                not define this, so it cannot represent
+                $TAB$(valclr(obj)).
+                When appropriate, you may define it by overloading
+                $hint
+                or skip the check for this one value with `force=true`.
+                """
+            ))
+        end
+        true
+    end
 end
 
 """
@@ -138,24 +215,46 @@ end
 
 Checks whether `object` satisfies the interface required by `category`. This
 generic fallback matches any category that hasn't defined its own, more specific
-method: it warns that no such check exists, then returns `true` rather than
+method, but it warns that no such check exists, then returns `true` rather than
 erroring. Define `checkInterface(obj::SomeType, cat::SomeCategory) = ...`
-to actually enforce an interface for a given category; such methods should
-return `true` and throw an [`InterfaceViolation`](@ref) explaining what is
-wrong otherwise.
+to actually enforce an interface for a given category. Such methods should
+return `true` or throw an [`InterfaceViolation`](@ref) explaining what is
+wrong.
 """
 function checkInterface(object, category::Category)
-    @warn "checkInterface() not overloaded for object::$(typeof(object)) "*
-        "in category::$(typeof(category))"
+    @warn (@annotated """
+    The category $category does not check that its objects represented by \
+    values of type $(dtclr(typeString(typeof(object)))) have the methods it \
+    requires, such as when wrapping
+    $TAB$(valclr(object)).
+    This warning is shown once for each such type. You may ignore it, or, \
+    when appropriate, add the check by overloading
+    $(overloadHint("checkInterface",
+        ("obj", @annotated("any value of type \
+            $(dtclr(typeString(typeof(object))))"), typeString(typeof(object))),
+        ("cat", @annotated("the category $category"),
+            typeString(typeof(category))),
+    ))
+    """) _id=(typeof(object), typeof(category)) maxlog=1
     return true
 end
 
 """
     X ∈ Cat
 
-Syntactic sugar for `inCategory`
+Membership, computed by attempting [`checkInCategory`](@ref) and reporting
+whether it throws a [`NotInCategory`](@ref). All other exceptions
+are rethrown.
 """
-Base.in(object, category::Category) = inCategory(object, category)
+function Base.in(object, category::Category)
+    try
+        checkInCategory(object, category)
+        return true
+    catch e
+        e isa NotInCategory && return false
+        rethrow()
+    end
+end
 
 """
     function object(oic::OIC)
@@ -180,40 +279,28 @@ end
 
 Syntactic sugar to write `C[x]` for `ObjectInCategory(x, C)`. Write
 `C[x, force=true]` to skip the checks, as in `ObjectInCategory(x, C; force=true)`.
-Keyword arguments in indexing require Julia 1.11 or later.
 """
 Base.getindex(C::Category, x; force::Bool=false) = ObjectInCategory(x, C; force=force)
-
-function coloredPrint(
-    oic::OIC; depth::Int=0, 
-    objdt=true, cat=true, catdt=false,
-)
-    objname = objclr(name(oic))
-    res = "$objname"
-
-    # add data type if needed
-    if objdt
-        dtname = dtclr(string(typeof(object(oic))))
-        res *= " :: $dtname"
-    end
-
-    # add category
-    if cat
-        res *= " in "
-        res *= coloredPrint(category(oic), catdt=catdt)
-    end
-
-    return res
-end
 
 # =========================================================
 # ================== OICs AS CATEGORIES ===================
 # =========================================================
 
+"""
+    struct OICAsCat{Obj, Cat}
+
+The category whose objects are the elements of `X :: ObjectInCategory{Obj,
+Cat}`, written `@ascat X`. See [Categories](@ref).
+"""
 struct OICAsCat{Obj, Cat} <: Category
     oic::OIC{Obj, Cat}
 end
 
+"""
+    oic(cat::OICAsCat)
+
+The `ObjectInCategory` that `cat` (i.e. `@ascat oic(cat)`) is the elements of.
+"""
 function oic(cat::OICAsCat{Obj, Cat}) where Obj where Cat
     return cat.oic
 end
@@ -225,15 +312,4 @@ Construct an [`OICAsCat`](@ref) from an [`ObjectInCategory`](@ref)
 """
 macro ascat(oic)
     return :($OICAsCat($(esc(oic))))
-end
-
-# how to print
-function coloredPrint(
-    cat::OICAsCat, depth::Int=0;
-    colored=true, catdt=false,
-)
-    strA = catclr("{")
-    strB = coloredPrint(cat.oic; depth=depth+1, objdt=catdt)
-    strC = catclr("}")
-    return strA*strB*strC
 end
