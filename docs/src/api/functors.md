@@ -8,6 +8,6 @@ The category of categories, functors, the terminal category, comma categories, d
 
 ```@autodocs
 Modules = [JuliaTopology]
-Pages = ["categories/Cat.jl", "Point.jl", "functors/Basic.jl", "SetCardEquiv.jl",
-    "Comma.jl", "FreeCat.jl", "FunctorCat.jl", "Diagram.jl", "Cone.jl"]
+Pages = ["categories/Cat.jl", "functors/Basic.jl",
+    "Comma.jl", "FreeCat.jl", "Op.jl", "FunctorCat.jl", "Diagram.jl", "Cone.jl"]
 ```

@@ -124,7 +124,7 @@ function Base.iterate(
         return nothing
     else
         (res, sts) = next
-        return (@ascat oic)[res, force=true], sts
+        return ascat(oic)[res, force=true], sts
     end
 end
 
@@ -136,7 +136,7 @@ function Base.iterate(
         return nothing
     else
         (res, sts) = next
-        return (@ascat oic)[res, force=true], sts
+        return ascat(oic)[res, force=true], sts
     end
 end
 
@@ -150,6 +150,13 @@ Base.IteratorSize(::Type{OIC{T, CatFinSet}}) where T = Base.HasLength()
 
 function name(::CatFinSet)
     return "FinSet"
+end
+
+# an element which is a `NamedTuple`, e.g. of a limit, by its components'
+# names: `(A: 1, B: :a)`
+function name(x::OIC{<:NamedTuple, <:OICAsCat{<:Any, CatFinSet}})
+    return "(" * join(("$k: $(v isa OIC ? name(v) : repr(v))"
+        for (k, v) in pairs(object(x))), ", ") * ")"
 end
 
 # =========================================================
@@ -174,8 +181,5 @@ function checkInCategory(
     end
 end
 
-# there is no required interface for sets as categories since
-# elements could be literally anything.
-checkInterface(
-    obj::Any, cat::OICAsCat{<:Any, CatFinSet}
-) = true
+# there is no required interface for sets as categories, since elements
+# could be literally anything

@@ -1,13 +1,15 @@
 # =========================================================
-# ================ DIFFERENT TYPES OF HOMS ================
+# ================ DIFFERENT KINDS OF HOMS ================
 # =========================================================
 
 """
-    Hom
+    Hom(X, Y)
 
-The category of morphisms between two objects
-in the same category. Tracks that shared category directly, alongside
-the domain and codomain.
+The category of morphisms from `X` to `Y`, two objects of the same category,
+which it tracks alongside them. A morphism from `X` to `Y` is any object of
+`Hom(X, Y)`. Whether a morphism is an epimorphism, monomorphism or isomorphism
+is a property of it, see [`isEpi`](@ref), [`isMono`](@ref) and
+[`isIso`](@ref).
 """
 struct Hom{DomT, CodT, CatT} <: Category
     domain::OIC{DomT, CatT}
@@ -18,125 +20,41 @@ struct Hom{DomT, CodT, CatT} <: Category
         dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}, cat::CatT
     ) where DomT where CodT where CatT
         homCategoriesAgree(dom, cod, cat) ||
-            throw(homArgsError(Hom, dom, cod, cat))
+            throw(homArgsError(dom, cod, cat))
         return new{DomT, CodT, CatT}(dom, cod, cat)
     end
-end
-
-function Hom(
-    dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}
-) where DomT where CodT where CatT
-    return Hom{DomT, CodT, CatT}(dom, cod, category(dom))
-end
-
-"""
-    Epi
-
-The category of morphisms between two objects
-in the same category. Tracks that shared category directly, alongside
-the domain and codomain.
-"""
-struct Epi{DomT, CodT, CatT} <: Category
-    domain::OIC{DomT, CatT}
-    codomain::OIC{CodT, CatT}
-    category::CatT
-
-    function Epi{DomT, CodT, CatT}(
-        dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}, cat::CatT
-    ) where DomT where CodT where CatT
-        homCategoriesAgree(dom, cod, cat) ||
-            throw(homArgsError(Epi, dom, cod, cat))
-        return new{DomT, CodT, CatT}(dom, cod, cat)
-    end
-end
-
-function Epi(
-    dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}
-) where DomT where CodT where CatT
-    return Epi{DomT, CodT, CatT}(dom, cod, category(dom))
-end
-
-"""
-    Mono
-
-The category of morphisms between two objects
-in the same category. Tracks that shared category directly, alongside
-the domain and codomain.
-"""
-struct Mono{DomT, CodT, CatT} <: Category
-    domain::OIC{DomT, CatT}
-    codomain::OIC{CodT, CatT}
-    category::CatT
-
-    function Mono{DomT, CodT, CatT}(
-        dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}, cat::CatT
-    ) where DomT where CodT where CatT
-        homCategoriesAgree(dom, cod, cat) ||
-            throw(homArgsError(Mono, dom, cod, cat))
-        return new{DomT, CodT, CatT}(dom, cod, cat)
-    end
-end
-
-function Mono(
-    dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}
-) where DomT where CodT where CatT
-    return Mono{DomT, CodT, CatT}(dom, cod, category(dom))
-end
-
-"""
-    Iso
-
-The category of morphisms between two objects
-in the same category. Tracks that shared category directly, alongside
-the domain and codomain.
-"""
-struct Iso{DomT, CodT, CatT} <: Category
-    domain::OIC{DomT, CatT}
-    codomain::OIC{CodT, CatT}
-    category::CatT
-
-    function Iso{DomT, CodT, CatT}(
-        dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}, cat::CatT
-    ) where DomT where CodT where CatT
-        homCategoriesAgree(dom, cod, cat) ||
-            throw(homArgsError(Iso, dom, cod, cat))
-        return new{DomT, CodT, CatT}(dom, cod, cat)
-    end
-end
-
-function Iso(
-    dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}
-) where DomT where CodT where CatT
-    return Iso{DomT, CodT, CatT}(dom, cod, category(dom))
 end
 
 # =========================================================
 # ================== MALFORMED HOMS =======================
 # =========================================================
 
-# `Kind(dom, cod)` is between objects of one category, `Kind(dom, cod, cat)`
+# `Hom(dom, cod)` is between objects of one category, `Hom(dom, cod, cat)`
 # additionally names it. Anything else is reported by `homArgsError`, worded
 # according to what is actually wrong with the arguments.
-for Kind in (:Hom, :Epi, :Mono, :Iso)
-    @eval begin
-        function $Kind(
-            dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}, cat::CatT
-        ) where DomT where CodT where CatT
-            return $Kind{DomT, CodT, CatT}(dom, cod, cat)
-        end
-
-        $Kind(objA, objB) = throw(homArgsError($Kind, objA, objB))
-        $Kind(objA, objB, cat) = throw(homArgsError($Kind, objA, objB, cat))
-    end
+function Hom(dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}) where DomT where CodT where CatT
+    return Hom{DomT, CodT, CatT}(dom, cod, category(dom))
 end
+
+function Hom(
+    dom::OIC{DomT, CatT}, cod::OIC{CodT, CatT}, cat::CatT
+) where DomT where CodT where CatT
+    return Hom{DomT, CodT, CatT}(dom, cod, cat)
+end
+
+# between categories, i.e. objects of `Cat`
+Hom(A::Category, B::Category) = Hom(Cat[A], Cat[B])
+
+Hom(objA, objB) = throw(homArgsError(objA, objB))
+Hom(objA, objB, cat) = throw(homArgsError(objA, objB, cat))
 
 # Whether both `dom` and `cod` belong to `cat`
 homCategoriesAgree(dom, cod, cat) = category(dom) == cat && category(cod) == cat
 
-# The error explaining why `Kind(objA, objB)`, or `Kind(objA, objB, cat)`, cannot
-# be built
-function homArgsError(Kind, objA, objB, cats...)
-    kind = catclr(string(nameof(Kind)))
+# The error explaining why `Hom(objA, objB)`, or `Hom(objA, objB, cat)`,
+# cannot be built
+function homArgsError(objA, objB, cats...)
+    kind = catclr("Hom")
     if !isempty(cats) && !(first(cats) isa Category)
         return ArgumentError(
             @annotated """
@@ -190,16 +108,82 @@ function homArgsError(Kind, objA, objB, cats...)
 end
 
 """
-    HomLike{DomT, CodT, CatT}
+    isEpi(f)
 
-Union of the categories of morphisms [`Hom`](@ref), [`Epi`](@ref),
-[`Mono`](@ref) and [`Iso`](@ref) between objects `DomT` and `CodT` of `CatT`,
-for methods that apply to all of them.
+Whether the morphism `f` is an epimorphism. Each implementation of morphisms
+overloads it for its own, e.g. a map of finite sets is one when it is
+surjective.
 """
-const HomLike{DomT, CodT, CatT} = Union{
-    Hom{DomT, CodT, CatT}, Epi{DomT, CodT, CatT},
-    Mono{DomT, CodT, CatT}, Iso{DomT, CodT, CatT},
-}
+function isEpi(f::OIC{<:Any, <:Hom})
+    H = category(f)
+    throw(InterfaceViolation(
+        @annotated """
+        Whether a morphism is an epimorphism must be defined for each category, but \
+        $(category(H)) does not define it for morphisms represented by \
+        values of type $(dtclr(typeString(typeof(object(f))))), such as
+        $TAB$f.
+        When appropriate, you may define it by overloading
+        $(overloadHint("isEpi",
+            ("f", @annotated("any morphism of $(category(H)) represented by \
+                values of type $(dtclr(typeString(typeof(object(f)))))"),
+                "OIC{$(typeString(typeof(object(f)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(category(H))))}}"),
+        ))
+        """
+    ))
+end
+
+"""
+    isMono(f)
+
+Whether the morphism `f` is a monomorphism. Each implementation of morphisms
+overloads it for its own, e.g. a map of finite sets is one when it is
+injective.
+"""
+function isMono(f::OIC{<:Any, <:Hom})
+    H = category(f)
+    throw(InterfaceViolation(
+        @annotated """
+        Whether a morphism is a monomorphism must be defined for each category, but \
+        $(category(H)) does not define it for morphisms represented by \
+        values of type $(dtclr(typeString(typeof(object(f))))), such as
+        $TAB$f.
+        When appropriate, you may define it by overloading
+        $(overloadHint("isMono",
+            ("f", @annotated("any morphism of $(category(H)) represented by \
+                values of type $(dtclr(typeString(typeof(object(f)))))"),
+                "OIC{$(typeString(typeof(object(f)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(category(H))))}}"),
+        ))
+        """
+    ))
+end
+
+"""
+    isIso(f)
+
+Whether the morphism `f` is an isomorphism. Each implementation of morphisms
+overloads it for its own, e.g. a map of finite sets is one when it is
+bijective.
+"""
+function isIso(f::OIC{<:Any, <:Hom})
+    H = category(f)
+    throw(InterfaceViolation(
+        @annotated """
+        Whether a morphism is an isomorphism must be defined for each category, but \
+        $(category(H)) does not define it for morphisms represented by \
+        values of type $(dtclr(typeString(typeof(object(f))))), such as
+        $TAB$f.
+        When appropriate, you may define it by overloading
+        $(overloadHint("isIso",
+            ("f", @annotated("any morphism of $(category(H)) represented by \
+                values of type $(dtclr(typeString(typeof(object(f)))))"),
+                "OIC{$(typeString(typeof(object(f)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(category(H))))}}"),
+        ))
+        """
+    ))
+end
 
 """
     compose(g, f)
@@ -207,32 +191,115 @@ const HomLike{DomT, CodT, CatT} = Union{
 The composite `g ∘ f` of morphisms `f: X → Y` and `g: Y → Z` of one category,
 applying `f` first. Each implementation of morphisms overloads it for its own.
 """
-function compose end
+function compose(g::OIC{<:Any, <:Hom}, f::OIC{<:Any, <:Hom})
+    C = category(category(f))
+    Tg, Tf = typeString(typeof(object(g))), typeString(typeof(object(f)))
+    types = Tg == Tf ? dtclr(Tg) : @annotated("$(dtclr(Tg)) and $(dtclr(Tf))")
+    throw(InterfaceViolation(
+        @annotated """
+        Composition of morphisms must be defined for each category, but $C does \
+        not define it for morphisms represented by values of type \
+        $types, such as
+        $TAB$g
+        and
+        $TAB$f.
+        When appropriate, you may define it by overloading
+        $(overloadHint("compose",
+            ("g", @annotated("any morphism of $C represented by values of \
+                type $(dtclr(typeString(typeof(object(g)))))"),
+                "OIC{$(typeString(typeof(object(g)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(C)))}}"),
+            ("f", @annotated("any morphism of $C represented by values of \
+                type $(dtclr(typeString(typeof(object(f)))))"),
+                "OIC{$(typeString(typeof(object(f)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(C)))}}"),
+        ))
+        """
+    ))
+end
 
 """
     firstDifference(f, g)
 
 Compare morphisms `f` and `g` with the same domain and codomain: `nothing` when
-they agree, and otherwise the first place they differ, as `(at, left, right)`,
-where `f` gives `left` and `g` gives `right` at `at`. Each implementation of
-morphisms overloads it for its own.
+they agree, and otherwise the first place they differ, as
+`(path, left, right)`: `f` gives `left` and `g` gives `right` at the element
+`last(path)`, reached through the components named by the rest of `path`
+(empty for a morphism without components). Each implementation of morphisms
+overloads it for its own.
 """
-function firstDifference end
+function firstDifference(f::OIC{<:Any, <:Hom}, g::OIC{<:Any, <:Hom})
+    C = category(category(g))
+    Tf, Tg = typeString(typeof(object(f))), typeString(typeof(object(g)))
+    types = Tf == Tg ? dtclr(Tf) : @annotated("$(dtclr(Tf)) and $(dtclr(Tg))")
+    throw(InterfaceViolation(
+        @annotated """
+        Comparison of morphisms must be defined for each category, but $C does \
+        not define it for morphisms represented by values of type \
+        $types, such as
+        $TAB$f
+        and
+        $TAB$g.
+        When appropriate, you may define it by overloading
+        $(overloadHint("firstDifference",
+            ("f", @annotated("any morphism of $C represented by values of \
+                type $(dtclr(typeString(typeof(object(f)))))"),
+                "OIC{$(typeString(typeof(object(f)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(C)))}}"),
+            ("g", @annotated("any morphism of $C represented by values of \
+                type $(dtclr(typeString(typeof(object(g)))))"),
+                "OIC{$(typeString(typeof(object(g)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(C)))}}"),
+        ))
+        """
+    ))
+end
+
+"""
+    g ∘ f
+
+The composite `compose(g, f)`, applying `f` first.
+"""
+Base.:∘(g::OIC{<:Any, <:Hom}, f::OIC{<:Any, <:Hom}) = compose(g, f)
+
+"""
+    agrees(f, g)
+
+Whether the morphisms `f` and `g` agree, i.e. `firstDifference(f, g)` finds no
+difference. Unlike `f == g`, which is identity, this compares what they do.
+"""
+agrees(f::OIC{<:Any, <:Hom}, g::OIC{<:Any, <:Hom}) = firstDifference(f, g) === nothing
 
 """
     id(X)
 
-The identity morphism of the object `X`, in `Iso(X, X)`. Each category
+The identity morphism of the object `X`, in `Hom(X, X)`. Each category
 overloads it for its own objects.
 """
-function id end
+function id(X::OIC)
+    throw(InterfaceViolation(
+        @annotated """
+        Identity morphisms must be defined for each category, but \
+        $(category(X)) does not define them for objects represented by \
+        values of type $(dtclr(typeString(typeof(object(X))))), such as
+        $TAB$X.
+        When appropriate, you may define them by overloading
+        $(overloadHint("id",
+            ("X", @annotated("any object of $(category(X)) represented by \
+                values of type $(dtclr(typeString(typeof(object(X)))))"),
+                "OIC{$(typeString(typeof(object(X)))), \
+                $(typeString(typeof(category(X))))}"),
+        ))
+        """
+    ))
+end
 
 """
     function domain(hom::AbstractHom)
 
 Get the domain.
 """
-function domain(hom::Union{Hom, Epi, Mono, Iso})
+function domain(hom::Hom)
     return hom.domain
 end
 
@@ -241,7 +308,7 @@ end
 
 Get the codomain.
 """
-function codomain(hom::Union{Hom, Epi, Mono, Iso})
+function codomain(hom::Hom)
     return hom.codomain
 end
 
@@ -250,7 +317,7 @@ end
 
 Retrieve the category that `hom`'s domain and codomain live in.
 """
-function category(hom::Union{Hom, Epi, Mono, Iso})
+function category(hom::Hom)
     return hom.category
 end
 
@@ -272,7 +339,7 @@ end
     canonicalHom(A, B)
 
 The canonical morphism from `A` to `B`: for objects of one category, an object
-of `Hom(A, B)` (or a more specific `Epi`, `Mono`, `Iso`); for two categories, a
+of `Hom(A, B)`; for two categories, a
 functor between them. Throws a `NoCanonicalHomError` when none is defined;
 categories overload this for their own objects.
 """
@@ -355,17 +422,17 @@ function morphismCallHint(morph, argname, arg)
 end
 
 """
-    (morph::OIC{<:Any, <:HomLike{DomT, CodT, CatT}})(
+    (morph::OIC{<:Any, <:Hom{DomT, CodT, CatT}})(
         elem::OIC{<:Any, OICAsCat{DomT, CatT}}
     )
 
 Apply `morph` to an element of (the category of elements of) its domain,
-giving an element of `@ascat codomain(morph)`.
+giving an element of `ascat(codomain(morph))`.
 
 This generic fallback always throws an [`InterfaceViolation`](@ref);
 implementations of morphisms overload it for their own types.
 """
-function (morph::OIC{<:Any, <:HomLike{DomT, CodT, CatT}})(
+function (morph::OIC{<:Any, <:Hom{DomT, CodT, CatT}})(
     elem::OIC{<:Any, OICAsCat{DomT, CatT}}
 ) where DomT where CodT where CatT
     throw(InterfaceViolation(
@@ -384,18 +451,18 @@ function (morph::OIC{<:Any, <:HomLike{DomT, CodT, CatT}})(
 end
 
 """
-    (morph::OIC{<:Any, <:HomLike{DomT, CodT, CatT}})(
-        elemMorph::OIC{<:Any, <:HomLike{<:Any, <:Any, OICAsCat{DomT, CatT}}}
+    (morph::OIC{<:Any, <:Hom{DomT, CodT, CatT}})(
+        elemMorph::OIC{<:Any, <:Hom{<:Any, <:Any, OICAsCat{DomT, CatT}}}
     )
 
 Apply `morph` to a morphism between elements of its domain (i.e. a morphism in
-`@ascat domain(morph)`), giving a morphism in `@ascat codomain(morph)`.
+`ascat(domain(morph))`), giving a morphism in `ascat(codomain(morph))`.
 
 This generic fallback always throws an [`InterfaceViolation`](@ref);
 implementations of morphisms overload it for their own types.
 """
-function (morph::OIC{<:Any, <:HomLike{DomT, CodT, CatT}})(
-    elemMorph::OIC{<:Any, <:HomLike{<:Any, <:Any, OICAsCat{DomT, CatT}}}
+function (morph::OIC{<:Any, <:Hom{DomT, CodT, CatT}})(
+    elemMorph::OIC{<:Any, <:Hom{<:Any, <:Any, OICAsCat{DomT, CatT}}}
 ) where DomT where CodT where CatT
     throw(InterfaceViolation(
         @annotated """
@@ -425,44 +492,46 @@ append!(FALLBACK_SIGNATURES, [
 # =========================================================
 
 """
-    inv(f::OIC{<:Any, <:HomLike})
+    inv(f::OIC{<:Any, <:Hom}; force=false)
 
-The inverse of a morphism `f` in `Iso(X, Y)`, a morphism in `Iso(Y, X)`.
+The inverse of an isomorphism `f: X → Y`, a morphism in `Hom(Y, X)`. With
+`force=true`, `f` is trusted to be an isomorphism rather than checked.
 
-This generic fallback always throws: an `ArgumentError` when `f` is not in an
-`Iso`, since only isomorphisms have inverses, and otherwise an
-[`InterfaceViolation`](@ref); implementations of morphisms overload it for
-their own types.
+This generic fallback always throws an [`InterfaceViolation`](@ref);
+implementations of morphisms overload it for their own types.
 """
-function Base.inv(f::OIC{<:Any, <:HomLike})
+function Base.inv(f::OIC{<:Any, <:Hom}; force::Bool=false)
     H = category(f)
-
-    # only isomorphisms have inverses
-    if !(H isa Iso)
-        throw(ArgumentError(
-            @annotated """
-            The morphism
-            $TAB$f
-            has no inverse, since only morphisms in an $(catclr("Iso")) have \
-            one. If it is a bijection, you may construct it in \
-            $(Iso(domain(H), codomain(H))) instead.
-            """
-        ))
-    end
-
-    # the type representing `f` must say how to invert it
     throw(InterfaceViolation(
         @annotated """
-        The type
-        $TAB$(dtclr(typeString(typeof(object(f)))))
-        does not define the inverse of its objects in $H, so the morphism
-        $TAB$f
-        cannot be inverted.
-        When appropriate, you may define this by overloading
+        Inverses of morphisms must be defined for each category, but \
+        $(category(H)) does not define them for morphisms represented by \
+        values of type $(dtclr(typeString(typeof(object(f))))), such as
+        $TAB$f.
+        When appropriate, you may define them by overloading
         $(overloadHint("Base.inv",
-            ("f", @annotated("any element of $H represented by that type"),
-                "OIC{$(typeString(typeof(object(f)))), $(typeString(typeof(H)))}"),
+            ("f", @annotated("any morphism of $(category(H)) represented by \
+                values of type $(dtclr(typeString(typeof(object(f)))))"),
+                "OIC{$(typeString(typeof(object(f)))), <:Hom{<:Any, <:Any, \
+                $(typeString(typeof(category(H))))}}"),
         ))
+        and accepting the keyword `force`.
         """
     ))
 end
+
+# The fallbacks for `compose`, `firstDifference`, `id` and the predicates only
+# throw, so they do not count as an implementation, e.g. for the checks of
+# comma categories and natural transformations
+let morph = OIC{Nothing, Hom{Nothing, Nothing, Category}}
+    append!(FALLBACK_SIGNATURES, [
+        which(Tuple{typeof(compose), morph, morph}).sig,
+        which(Tuple{typeof(firstDifference), morph, morph}).sig,
+        which(Tuple{typeof(id), OIC{Nothing, Category}}).sig,
+        which(Tuple{typeof(isEpi), morph}).sig,
+        which(Tuple{typeof(isMono), morph}).sig,
+        which(Tuple{typeof(isIso), morph}).sig,
+        which(Tuple{typeof(inv), morph}).sig,
+    ])
+end
+

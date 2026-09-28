@@ -23,21 +23,21 @@
         @test_throws ArgumentError generator(J, :h)
         @test object(compose(g, f)).path == (:f, :g)
         @test category(compose(g, f)) isa Hom
-        @test category(id(J[:A])) isa Iso
+        @test isIso(id(J[:A])) && !isIso(f)
+        @test isMono(f) && isEpi(f)
         @test compose(f, id(J[:A])) == f
         @test_throws ArgumentError compose(f, g)
-        @test Mono(J[:A], J[:C])[MorphFreeCat((:f, :g))] isa OIC
-        @test_throws NotInCategory Hom(J[:A], J[:C])[MorphFreeCat((:g, :f))]
-        @test_throws NotInCategory Hom(J[:A], J[:C])[MorphFreeCat((:f,))]
-        @test_throws NotInCategory Hom(J[:A], J[:C])[MorphFreeCat((:h,))]
-        @test_throws NotInCategory Iso(J[:A], J[:B])[MorphFreeCat((:f,))]
+        @test Hom(J[:A], J[:C])[GenericMorphFreeCat((:f, :g))] isa OIC
+        @test_throws NotInCategory Hom(J[:A], J[:C])[GenericMorphFreeCat((:g, :f))]
+        @test_throws NotInCategory Hom(J[:A], J[:C])[GenericMorphFreeCat((:f,))]
+        @test_throws NotInCategory Hom(J[:A], J[:C])[GenericMorphFreeCat((:h,))]
     end
 
     @testset "firstDifference in FinSet" begin
         A = FinSet[1:3]
-        a = @ascat(A)
+        a = ascat(A)
         @test firstDifference(id(A), id(A)) === nothing
         d = firstDifference(Hom(A, A)[x -> a[1]], id(A))
-        @test d.at == a[2] && d.left == a[1] && d.right == a[2]
+        @test d.path == (a[2],) && d.left == a[1] && d.right == a[2]
     end
 end

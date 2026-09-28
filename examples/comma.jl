@@ -6,7 +6,7 @@
 using JuliaTopology
 
 X, A, B = FinSet[1:2], FinSet[1:3], FinSet[1:4]
-x, a, b = @ascat(X), @ascat(A), @ascat(B)
+x, a, b = ascat(X), ascat(A), ascat(B)
 nothing #hide
 
 # ## The arrow category
@@ -19,8 +19,8 @@ K = I ↓ I
 
 #-
 
-h = Hom(A, X)[t -> x[mod1(object(t), 2)]]
-println(K[ObjComma(A, X, h)])
+h = Hom(A, X)[t -> mod1(t, 2), values=true]
+println(K[(A, X, h)])
 
 # ## Slices
 #
@@ -28,30 +28,31 @@ println(K[ObjComma(A, X, h)])
 
 S = Slice(X)
 f = S[h]
-g = S[Hom(B, X)[t -> x[mod1(object(t), 2)]]]
+g = S[Hom(B, X)[t -> mod1(t, 2), values=true]]
 println(f, "\n", g)
 
 # A morphism of the slice is a map `A → B` making the triangle commute:
 
-println(Hom(f, g)[Mono(A, B)[t -> b[object(t)]]])
+println(Hom(f, g)[Hom(A, B)[t -> t, values=true]])
 
 # A map which does not commute is rejected:
 
 try
-    Hom(f, g)[Hom(A, B)[t -> b[object(t) + 1]]]
+    Hom(f, g)[Hom(A, B)[t -> t + 1, values=true]]
 catch e
     showerror(stdout, e)
 end
 
-# `id(X)` is the terminal object, and `f` is its own unique morphism into it:
+# The terminal object is isomorphic to `id(X)`, and every object has a unique
+# morphism into it:
 
 println(canonicalHom(f, terminal(S)))
 
 # ## Coslices
 #
 # Dually, the coslice under `X` has the maps out of `X` as its objects, and
-# `id(X)` is its initial object.
+# its initial object is isomorphic to `id(X)`.
 
 C = Coslice(X)
-k = C[Hom(X, A)[t -> a[object(t)]]]
+k = C[Hom(X, A)[t -> t, values=true]]
 println(canonicalHom(initial(C), k))

@@ -40,7 +40,6 @@ function checkInCategory(obj, Cat::CatFinCard)
     ))
 end
 
-checkInterface(::Int, ::CatFinCard) = true
 
 # =========================================================
 # ================ STANDARDIZED INTERFACE =================

@@ -2,6 +2,7 @@ module JuliaTopology
 
 using Base.Iterators, FLoops, Transducers
 using DataStructures
+import LinearAlgebra: ×
 using StyledStrings: AnnotatedString, Face, addface!, annotatedstring, annotations
 using JuliaSyntaxHighlighting: highlight
 import Nemo
@@ -17,11 +18,10 @@ include("categories/Cat.jl")
 include("categories/FinCard.jl")
 include("categories/FinSet.jl")
 include("categories/MorphFinSet.jl")
-include("categories/Point.jl")
 include("categories/FreeCat.jl")
+include("categories/Op.jl")
 # include("categories/MorphFinCard.jl")
 
-include("functors/SetCardEquiv.jl")
 include("functors/Basic.jl")
 include("categories/FunctorCat.jl")
 include("functors/Diagram.jl")
@@ -34,35 +34,46 @@ include("categories/LimitsFinSet.jl")
 # ===================== EXPORT STUFF ======================
 # =========================================================
 
-# OIC Stuff
-export Category, ObjectInCategory, OIC, object, category, @ascat,
-    OICAsCat, oic
+# Objects and categories
+export Category, ObjectInCategory, OIC, object, category, ascat, OICAsCat, oic
 
 # Exceptions
 export NoCanonicalHomError, InterfaceViolation, NotInCategory
 
-# Category Machinery
-export Hom, Epi, Mono, Iso
+# Morphisms
+export Hom, domain, codomain, compose, id, firstDifference, agrees, isEpi, isMono,
+    isIso, canonicalHom, →
 
-# Particular Implementations
-export CatPoint, Point, MorphPoint, FuncIdentity, FuncConstant
-export FunctorCat, MorphNat, FuncDiagram, FuncDiagonal, diagram, diagonal,
-    parallelPair, cospan, span, discrete
-export FreeCat, MorphFreeCat, generator, discreteShape, emptyShape,
+# Categories
+export Op, op, GenericMorphOp, Cat, CatCat, FinSet, CatFinSet, FinCard, CatFinCard, Point, FreeCat,
+    FunctorCat, Comma, ↓, Cone, Cocone, Slice, Coslice
+
+# Finite sets
+export cardinality, areIsomorphic, ≅, GenericMorphFinSet
+
+# Functors and diagrams
+export FuncIdentity, FuncCompose, toPoint, mapCone, FuncDiagram,
+    FuncDiagonal, constant, diagram, diagonal, shape, parallelPair, cospan, span,
+    discrete
+
+# Shapes and free categories
+export vertices, generators, GenericMorphFreeCat, generator, discreteShape, emptyShape,
     parallelPairShape, cospanShape, spanShape
-export Comma, ↓, ObjComma, MorphComma, source, target, arrow,
-    Slice, Coslice, terminal, initial
-export Cone, Cocone, apex, legs, leg
-export LimitSet, CoproductSet, QuotientSet, limit, colimit, product, coproduct,
-    equalizer, coequalizer, pullback, pushout
-export FuncFinCardToSet, FuncFinSetToCard, Lifts, Cat, CatCat, FinCard, CatFinCard, 
-    GenericMorphFinSet, GenericMorphFinCard, FinCat, FinMap, FinSet, CatFinSet
 
-# Methods On OICs/Categories
-export compose, id, firstDifference, domain, codomain, cardinality, canonicalHom, areIsomorphic,
-    canLift, lift
+# Functor and comma categories
+export GenericMorphFunctorCat, components, arrowCategory, GenericComma, GenericMorphComma, source, target,
+    arrow, apex, legs, leg, apexMorphism
+
+# Limits and colimits
+export limit, colimit, terminal, initial, universalArrow, pointCones,
+    CategoryOfElements, ∫, objectSet, componentMap, π₀, product, coproduct, equalizer,
+    coequalizer, pullback, pushout, globalElement, element, ×, ⊔
+
+# Hom-sets and images
+export HomSet, homSet, evaluation, curry, uncurry, FuncHomFrom, FuncHomTo,
+    homFrom, homTo, image, fiber, imageFactorization
 
 # Misc
-export ≅, in, →
+export in
 
 end

@@ -5,9 +5,9 @@
 The comma category `(F ↓ G)` of functors `F: A → C` and `G: B → C`, i.e.
 objects of `Hom(Cat[A], Cat[C])` and `Hom(Cat[B], Cat[C])`.
 
-Its objects are [`ObjComma`](@ref)s `(a, b, h)`, with `a` an object of `A`,
+Its objects are [`GenericComma`](@ref)s `(a, b, h)`, with `a` an object of `A`,
 `b` one of `B`, and `h: F(a) → G(b)` a morphism of `C`. Its morphisms
-`(a, b, h) → (a′, b′, h′)` are [`MorphComma`](@ref)s `(α, β)`, with `α: a → a′`
+`(a, b, h) → (a′, b′, h′)` are [`GenericMorphComma`](@ref)s `(α, β)`, with `α: a → a′`
 in `A` and `β: b → b′` in `B` such that `G(β) ∘ h == h′ ∘ F(α)`.
 
 # Standardized Interface
@@ -25,7 +25,7 @@ struct Comma{FT, GT} <: Category
     function Comma(F::FT, G::GT) where FT where GT
         # both are functors
         for (side, H) in (("first", F), ("second", G))
-            if !(H isa OIC && category(H) isa HomLike{<:Any, <:Any, CatCat})
+            if !(H isa OIC && category(H) isa Hom{<:Any, <:Any, CatCat})
                 throw(ArgumentError(
                     @annotated """
                     The $side argument of a comma category must be a \
@@ -64,26 +64,26 @@ The comma category `(F ↓ G)`, i.e. `Comma(F, G)`.
 ↓(F, G) = Comma(F, G)
 
 """
-    ObjComma(source, target, arrow)
+    GenericComma(source, target, arrow)
 
 An object `(a, b, h)` of a [`Comma`](@ref) category `(F ↓ G)`: an object `a`
 of the domain of `F`, an object `b` of the domain of `G`, and a morphism
 `h: F(a) → G(b)`.
 """
-struct ObjComma
+struct GenericComma
     source::OIC
     target::OIC
     arrow::OIC
 end
 
 """
-    MorphComma(sourceMorph, targetMorph)
+    GenericMorphComma(sourceMorph, targetMorph)
 
 A morphism `(α, β)` of a [`Comma`](@ref) category `(F ↓ G)`, from `(a, b, h)`
 to `(a′, b′, h′)`: morphisms `α: a → a′` and `β: b → b′` such that
 `G(β) ∘ h == h′ ∘ F(α)`.
 """
-struct MorphComma
+struct GenericMorphComma
     sourceMorph::OIC
     targetMorph::OIC
 end
@@ -92,7 +92,7 @@ end
 # ================== REQUIRED INTERFACE ===================
 # =========================================================
 
-function checkInCategory(obj::ObjComma, K::Comma)
+function checkInCategory(obj::GenericComma, K::Comma)
     A = object(domain(category(K.F)))
     B = object(domain(category(K.G)))
     C = object(codomain(category(K.F)))
@@ -122,7 +122,7 @@ function checkInCategory(obj::ObjComma, K::Comma)
     end
 
     # `h` is a morphism of `C`
-    if !(category(obj.arrow) isa HomLike && category(category(obj.arrow)) == C)
+    if !(category(obj.arrow) isa Hom && category(category(obj.arrow)) == C)
         throw(NotInCategory(obj, K,
             @annotated """
             The arrow
@@ -160,41 +160,29 @@ function checkInCategory(obj::ObjComma, K::Comma)
     return true
 end
 
-checkInterface(::ObjComma, ::Comma) = true
 
 function checkInCategory(obj, K::Comma)
-    # only `ObjComma`s, which slices and coslices build from a morphism
+    # only `GenericComma`s, which slices and coslices build from a morphism
     throw(NotInCategory(obj, K,
         @annotated """
         The value
         $TAB$(obj isa OIC ? obj : valclr(obj))
         is not an object of $K, whose objects are \
-        $(codeclr("ObjComma(a, b, h)"))s. For a slice or coslice, you may \
+        $(codeclr("GenericComma(a, b, h)"))s. For a slice or coslice, you may \
         also pass the morphism $(codeclr("h")) itself.
         """
     ))
 end
 
 function checkInCategory(
-    morph::MorphComma, H::HomLike{ObjComma, ObjComma, <:Comma}
+    morph::GenericMorphComma, H::Hom{GenericComma, GenericComma, <:Comma}
 )
     K = category(H)
     dom, cod = object(domain(H)), object(codomain(H))
     α, β = morph.sourceMorph, morph.targetMorph
 
-    # only `Hom` and `Iso`
-    if H isa Union{Epi, Mono}
-        throw(NotInCategory(morph, H,
-            @annotated """
-            Morphisms of a comma category are only checked for being in \
-            $(catclr("Hom")) or $(catclr("Iso")), so none can be shown to be \
-            in $H.
-            """
-        ))
-    end
-
     # `α: a → a′`
-    if !(category(α) isa HomLike && domain(category(α)) == dom.source &&
+    if !(category(α) isa Hom && domain(category(α)) == dom.source &&
             codomain(category(α)) == cod.source)
         throw(NotInCategory(morph, H,
             @annotated """
@@ -207,7 +195,7 @@ function checkInCategory(
     end
 
     # `β: b → b′`
-    if !(category(β) isa HomLike && domain(category(β)) == dom.target &&
+    if !(category(β) isa Hom && domain(category(β)) == dom.target &&
             codomain(category(β)) == cod.target)
         throw(NotInCategory(morph, H,
             @annotated """
@@ -219,27 +207,17 @@ function checkInCategory(
         ))
     end
 
-    # isomorphisms componentwise, for `Iso`
-    if H isa Iso && !(category(α) isa Iso && category(β) isa Iso)
-        throw(NotInCategory(morph, H,
-            @annotated """
-            The morphism $(objclr(name(OIC(morph, H; force=true)))) is not in \
-            $H, since its source and target morphisms are not both in an \
-            $(catclr("Iso")).
-            """
-        ))
-    end
-
     # commutativity can only be checked when the morphisms of `C` can be
     # composed and compared
     C = object(codomain(category(K.F)))
     Gβ, Fα = K.G(β), K.F(α)
     comparable =
-        hasmethod(compose, Tuple{typeof(Gβ), typeof(dom.arrow)}) &&
-        hasmethod(compose, Tuple{typeof(cod.arrow), typeof(Fα)})
+        hasNonFallbackMethod(Tuple{typeof(compose), typeof(Gβ), typeof(dom.arrow)}) &&
+        hasNonFallbackMethod(Tuple{typeof(compose), typeof(cod.arrow), typeof(Fα)})
     if comparable
         lhs, rhs = compose(Gβ, dom.arrow), compose(cod.arrow, Fα)
-        comparable = hasmethod(firstDifference, Tuple{typeof(lhs), typeof(rhs)})
+        comparable = hasNonFallbackMethod(
+            Tuple{typeof(firstDifference), typeof(lhs), typeof(rhs)})
     end
     if !comparable
         throw(NotInCategory(morph, H,
@@ -260,10 +238,9 @@ function checkInCategory(
             @annotated """
             The morphism $(objclr(name(OIC(morph, H; force=true)))) is not \
             in $H, since it does not commute: the element \
-            $(difference.at isa Tuple ?
-                @annotated("$(objclr(name(difference.at[2]))) of \
-                    $(valclr(difference.at[1]))") :
-                objclr(name(difference.at))) is sent to \
+            $(objclr(name(last(difference.path))))$(length(difference.path) > 1 ?
+                @annotated(" of $(join(valclr.(difference.path[1:end-1]), " of "))") :
+                "") is sent to \
             $(objclr(name(difference.left))) by $(codeclr("G(β) ∘ h")) but \
             to $(objclr(name(difference.right))) by $(codeclr("h′ ∘ F(α)")).
             """
@@ -273,36 +250,58 @@ function checkInCategory(
     return true
 end
 
-checkInterface(::MorphComma, ::HomLike{ObjComma, ObjComma, <:Comma}) = true
 
 # =========================================================
 # ================ STANDARDIZED INTERFACE =================
 # =========================================================
 
 """
+    K[(a, b, h), force=false]
+
+The object `(a, b, h)` of a [`Comma`](@ref) category `K`, i.e.
+`K[GenericComma(a, b, h)]`.
+"""
+function Base.getindex(K::Comma, (a, b, h)::Tuple{OIC, OIC, OIC}; force::Bool=false)
+    return K[GenericComma(a, b, h), force=force]
+end
+
+"""
+    H[(α, β), force=false]
+
+The morphism `(α, β)` of a [`Comma`](@ref) category, in `H = Hom(o, o′)`, i.e.
+`H[GenericMorphComma(α, β)]`.
+"""
+function Base.getindex(
+    H::Hom{GenericComma, GenericComma, <:Comma}, (α, β)::Tuple{OIC, OIC};
+    force::Bool=false
+)
+    return H[GenericMorphComma(α, β), force=force]
+end
+
+"""
     source(o)
 
 The object `a` of an object `o = (a, b, h)` of a [`Comma`](@ref) category.
 """
-source(o::OIC{ObjComma, <:Comma}) = object(o).source
+source(o::OIC{GenericComma, <:Comma}) = object(o).source
 
 """
     target(o)
 
 The object `b` of an object `o = (a, b, h)` of a [`Comma`](@ref) category.
 """
-target(o::OIC{ObjComma, <:Comma}) = object(o).target
+target(o::OIC{GenericComma, <:Comma}) = object(o).target
 
 """
     arrow(o)
 
 The morphism `h` of an object `o = (a, b, h)` of a [`Comma`](@ref) category.
 """
-arrow(o::OIC{ObjComma, <:Comma}) = object(o).arrow
+arrow(o::OIC{GenericComma, <:Comma}) = object(o).arrow
 
 function compose(
-    n::OIC{MorphComma, <:HomLike{ObjComma, ObjComma, <:Comma}},
-    m::OIC{MorphComma, <:HomLike{ObjComma, ObjComma, <:Comma}}
+    n::OIC{GenericMorphComma, <:Hom{GenericComma, GenericComma, <:Comma}},
+    m::OIC{GenericMorphComma, <:Hom{GenericComma, GenericComma, <:Comma}}
 )
     M, N = category(m), category(n)
 
@@ -320,9 +319,8 @@ function compose(
         ))
     end
 
-    Kind = M isa Iso && N isa Iso ? Iso : Hom
-    return Kind(domain(M), codomain(N))[
-        MorphComma(
+    return Hom(domain(M), codomain(N))[
+        GenericMorphComma(
             compose(object(n).sourceMorph, object(m).sourceMorph),
             compose(object(n).targetMorph, object(m).targetMorph),
         ),
@@ -330,8 +328,46 @@ function compose(
     ]
 end
 
-function id(o::OIC{ObjComma, <:Comma})
-    return Iso(o, o)[MorphComma(id(source(o)), id(target(o))), force=true]
+"""
+    isIso(m)
+
+Whether the morphism `m = (α, β)` of a comma category is an isomorphism, i.e.
+both `α` and `β` are.
+"""
+function isIso(m::OIC{GenericMorphComma, <:Hom{GenericComma, GenericComma, <:Comma}})
+    return isIso(object(m).sourceMorph) && isIso(object(m).targetMorph)
+end
+
+"""
+    inv(m; force=false)
+
+The inverse `(α⁻¹, β⁻¹)` of an isomorphism `m = (α, β)` of a comma category.
+Throws an `ArgumentError` unless `m` is an isomorphism; `force=true` skips this
+check.
+"""
+function Base.inv(
+    m::OIC{GenericMorphComma, <:Hom{GenericComma, GenericComma, <:Comma}};
+    force::Bool=false
+)
+    # an isomorphism in both components
+    if !force && !isIso(m)
+        throw(ArgumentError(
+            @annotated """
+            The morphism
+            $TAB$m
+            has no inverse, since its components are not both isomorphisms.
+            """
+        ))
+    end
+    H = category(m)
+    α, β = object(m).sourceMorph, object(m).targetMorph
+    return Hom(codomain(H), domain(H))[
+        (inv(α; force=true), inv(β; force=true)), force=true
+    ]
+end
+
+function id(o::OIC{GenericComma, <:Comma})
+    return Hom(o, o)[GenericMorphComma(id(source(o)), id(target(o))), force=true]
 end
 
 # =========================================================
@@ -340,12 +376,12 @@ end
 
 name(K::Comma) = "($(name(K.F)) ↓ $(name(K.G)))"
 
-function name(o::OIC{ObjComma, <:Comma})
+function name(o::OIC{GenericComma, <:Comma})
     return "($(shortName(source(o))), $(shortName(target(o))), \
         $(shortName(arrow(o))))"
 end
 
-function name(m::OIC{MorphComma, <:HomLike{ObjComma, ObjComma, <:Comma}})
+function name(m::OIC{GenericMorphComma, <:Hom{GenericComma, GenericComma, <:Comma}})
     return "($(shortName(object(m).sourceMorph)), \
         $(shortName(object(m).targetMorph)))"
 end
@@ -353,129 +389,3 @@ end
 function treeNode(K::Comma; withcat=true)
     return coloredPrint(K), ["F" => K.F, "G" => K.G]
 end
-
-# =========================================================
-# ================== SLICES AND COSLICES ==================
-# =========================================================
-
-const Slice = Comma{<:OIC{FuncIdentity}, <:OIC{FuncConstant}}
-
-const Coslice = Comma{<:OIC{FuncConstant}, <:OIC{FuncIdentity}}
-
-"""
-    Slice(X)
-
-The slice category `C/X` over an object `X` of `C`, i.e. `id(Cat[C]) ↓ Δ(X)`.
-Its objects are the morphisms `f: A → X`, written `Slice(X)[f]`, and its
-morphisms from `f: A → X` to `g: B → X` are the morphisms `h: A → B` with
-`g ∘ h == f`, written `Hom(Slice(X)[f], Slice(X)[g])[h]`. `Slice` is also the
-type of every slice category, for dispatch.
-"""
-function Slice(X::OIC)
-    C = Cat[category(X)]
-    return id(C) ↓ Hom(Cat[Point], C)[FuncConstant(X)]
-end
-
-"""
-    Coslice(X)
-
-The coslice category `X/C` under an object `X` of `C`, i.e.
-`Δ(X) ↓ id(Cat[C])`. Its objects are the morphisms `f: X → A`, written
-`Coslice(X)[f]`, and its morphisms from `f: X → A` to `g: X → B` are the
-morphisms `h: A → B` with `h ∘ f == g`, written
-`Hom(Coslice(X)[f], Coslice(X)[g])[h]`. `Coslice` is also the type of every
-coslice category, for dispatch.
-"""
-function Coslice(X::OIC)
-    C = Cat[category(X)]
-    return Hom(Cat[Point], C)[FuncConstant(X)] ↓ id(C)
-end
-
-function Base.getindex(K::Slice, f::OIC{<:Any, <:HomLike}; force::Bool=false)
-    return K[ObjComma(domain(category(f)), Point[:pt], f), force=force]
-end
-
-function Base.getindex(K::Coslice, f::OIC{<:Any, <:HomLike}; force::Bool=false)
-    return K[ObjComma(Point[:pt], codomain(category(f)), f), force=force]
-end
-
-function Base.getindex(
-    H::HomLike{ObjComma, ObjComma, <:Slice}, h::OIC{<:Any, <:HomLike};
-    force::Bool=false
-)
-    return H[MorphComma(h, id(Point[:pt])), force=force]
-end
-
-function Base.getindex(
-    H::HomLike{ObjComma, ObjComma, <:Coslice}, h::OIC{<:Any, <:HomLike};
-    force::Bool=false
-)
-    return H[MorphComma(id(Point[:pt]), h), force=force]
-end
-
-"""
-    terminal(Slice(X))
-
-The terminal object `id(X)` of the slice category over `X`. The unique
-morphism into it from `f` is `canonicalHom(f, terminal(Slice(X)))`, which is
-`f` itself.
-"""
-terminal(K::Slice) = K[id(object(K.G).value), force=true]
-
-"""
-    initial(Coslice(X))
-
-The initial object `id(X)` of the coslice category under `X`. The unique
-morphism out of it to `f` is `canonicalHom(initial(Coslice(X)), f)`, which is
-`f` itself.
-"""
-initial(K::Coslice) = K[id(object(K.F).value), force=true]
-
-function canonicalHom(
-    o::OIC{ObjComma, <:Slice}, t::OIC{ObjComma, <:Slice}
-)
-    # into the terminal object of the same slice
-    if category(o) != category(t) || t != terminal(category(t))
-        throw(NoCanonicalHomError(o, t,
-            @annotated """
-            In a slice category, a canonical morphism is only defined into \
-            its terminal object, but
-            $TAB$t
-            is not the terminal object $(terminal(category(o))).
-            """
-        ))
-    end
-    return Hom(o, t)[arrow(o), force=true]
-end
-
-function canonicalHom(
-    i::OIC{ObjComma, <:Coslice}, o::OIC{ObjComma, <:Coslice}
-)
-    # out of the initial object of the same coslice
-    if category(o) != category(i) || i != initial(category(i))
-        throw(NoCanonicalHomError(i, o,
-            @annotated """
-            In a coslice category, a canonical morphism is only defined out \
-            of its initial object, but
-            $TAB$i
-            is not the initial object $(initial(category(o))).
-            """
-        ))
-    end
-    return Hom(i, o)[arrow(o), force=true]
-end
-
-name(K::Slice) =
-    "$(name(object(K.G).value |> category))/$(shortName(object(K.G).value))"
-
-name(K::Coslice) =
-    "$(shortName(object(K.F).value))/$(name(object(K.F).value |> category))"
-
-name(o::OIC{ObjComma, <:Union{Slice, Coslice}}) =
-    shortName(arrow(o))
-
-name(m::OIC{MorphComma, <:HomLike{ObjComma, ObjComma, <:Slice}}) =
-    shortName(object(m).sourceMorph)
-
-name(m::OIC{MorphComma, <:HomLike{ObjComma, ObjComma, <:Coslice}}) =
-    shortName(object(m).targetMorph)

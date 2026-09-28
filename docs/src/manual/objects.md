@@ -24,12 +24,12 @@ X = ObjectInCategory([1, 2, 3], FinSet)   # or FinSet[[1, 2, 3]]
   generically on top of the required interface, so every implementation gets
   them for free. See [The category FinSet](@ref) for a full example of both.
 * A category may opt into letting the elements of its own objects be treated
-  as objects of a further category, `@ascat X` for `X :: OIC`. This is not
+  as objects of a further category, `ascat(X)` for `X :: OIC`. This is not
   universal — `FinSet` does it, `FinCard` doesn't, since an integer has no
   elements of its own. See [Categories](@ref) and
   [Finite sets as categories](@ref).
 * Morphisms are not a separate wrapper either. Given `D, C :: OIC` of the same
-  category, `Hom(D, C)` (and `Epi`/`Mono`/`Iso`) is itself a `Category`, and a
+  category, `Hom(D, C)` is itself a `Category`, and a
   morphism is any object of it. See [Homs between categories](@ref).
 * A conversion between categories ("lifting") is registered as a morphism
   *between categories themselves*, and resolved along a path of registered
@@ -68,7 +68,7 @@ A category overloads, for its own objects:
 - `checkInterface(x, C::Category)` — checks that `x`'s type implements
   whatever standardized-interface functions `C` needs (see e.g.
   [The category FinSet](@ref)); throws an
-  [`InterfaceViolation`](@ref) if not. Defaults to a warning.
+  [`InterfaceViolation`](@ref) if not. Defaults to requiring nothing.
 - `name(C::Category)::String` — how `C` prints. Defaults to the type name.
 
 `ObjectInCategory(x, C)` calls `checkInCategory` then `checkInterface`, so
@@ -81,7 +81,7 @@ e.g. when `x` is already known to be valid.
   a [`NotInCategory`](@ref). Any other exception is a bug in a check and
   propagates.
 
-`@ascat X` (i.e. `OICAsCat(X)`), regarding the elements of `X :: OIC` as
+`ascat(X)` (i.e. `OICAsCat(X)`), regarding the elements of `X :: OIC` as
 objects of their own category, is not part of every category's standardized
 interface — it is a mechanism a category can opt into by overloading
 `checkInCategory` for `OICAsCat{_, C}`, not a guarantee that comes for free.

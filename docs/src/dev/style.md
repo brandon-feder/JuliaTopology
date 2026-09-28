@@ -6,9 +6,15 @@
     `CatSomething` (e.g. `CatFinSet`, `CatFinCard`). Its global instance is
     exported under the un-prefixed, lowercase-first name (`FinSet`,
     `FinCard`).
-* `Hom`, `Epi`, `Mono`, `Iso` are the exception: they are categories (`Cat`
-    would apply) but keep their own short names, since they are parameterized
-    by domain/codomain rather than standing alone.
+* Categories built from other things keep a short name without the `Cat`
+    prefix, since they are parameterized rather than standing alone: `Hom`,
+    `FreeCat`, `FunctorCat`, `Comma`, `Cone`, `Cocone`.
+* Whether a morphism is an epimorphism, monomorphism or isomorphism is a
+    property checked by `isEpi`/`isMono`/`isIso`, never a separate category.
+* The type representing objects of a category is named `Generic<Category>`
+    (e.g. `GenericComma`), its morphisms `GenericMorph<Category>` (e.g.
+    `GenericMorphFinSet`, `GenericMorphComma`), and a functor `Func<Name>`
+    (e.g. `FuncDiagram`, `FuncDiagonal`).
 * Type parameters holding a plain, unwrapped type are named for what they
     hold (`ObjT`, `DomT`, `CodT`, or plain `T`), not a fixed placeholder name
     like `Carrier`. There is no `Carrier` concept in this design — there is
@@ -28,7 +34,12 @@
     # =========================================================
     ```
     The two sections common to nearly every category file are
-    `REQUIRED INTERFACE` and `STANDARDIZED INTERFACE`, in that order.
+    `REQUIRED INTERFACE` and `STANDARDIZED INTERFACE`, in that order,
+    followed by `PRINTING`. A file of constructions rather than a category
+    (e.g. `LimitsFinSet.jl`) is divided by topic instead.
+* `name` and `treeNode` methods for a category live in its own file, since
+    `Printing.jl` is loaded before the categories; `Printing.jl` only covers
+    `ObjectInCategory`, `OICAsCat` and `Hom`.
 * Every `.jl` file under `src/` must be reachable from an `include` in
     `src/JuliaTopology.jl` (directly or transitively). A file that is not
     `include`d is dead code; either wire it in or delete it, do not leave it
@@ -119,3 +130,18 @@
     every mutating entry point of every implementation it could be called on.
     Until that invalidation exists, recompute from current state on every
     call.
+
+## Errors
+
+* An `ArgumentError` reports malformed input to a constructor or function
+    (e.g. an entry of `H[pairs]` which is not a pair, or morphisms which cannot
+    be composed).
+* A `NotInCategory` reports a value that is well formed but not an object of
+    the category it is wrapped in, and is thrown only by `checkInCategory`.
+* An `InterfaceViolation` reports a missing method, from `checkInterface` or
+    a generic fallback.
+* A `NoCanonicalHomError` reports that there is no unique morphism, from
+    `canonicalHom`.
+* Each check is followed directly by the `throw` of its own message; message
+    text is not built by helper functions.
+

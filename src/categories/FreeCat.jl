@@ -1,3 +1,49 @@
+# =========================================================
+# ======================== SHAPES =========================
+# =========================================================
+
+"""
+    vertices(J)
+
+The objects of a shape `J`, a category diagrams are functors from, as a tuple
+of `Symbol`s; with [`generators`](@ref), all that diagrams, functor categories
+and limits need to know of `J`. [`FreeCat`](@ref) defines both; any other
+category may be used as a shape by defining them too.
+"""
+function vertices(J::Category)
+    throw(InterfaceViolation(
+        @annotated """
+        The category $J cannot be the shape of a diagram, since it does not \
+        list its objects. When appropriate, you may make it a shape by \
+        overloading
+        $(overloadHint("vertices", ("J", @annotated("the category $J"),
+            typeString(typeof(J)))))
+        and $(codeclr("generators")).
+        """
+    ))
+end
+
+"""
+    generators(J)
+
+The generating arrows of a shape `J`, as a `NamedTuple` sending each label to
+`source => target`, both among [`vertices`](@ref)`(J)`. Every morphism of `J`
+should be a composite of these: a diagram gives a morphism for each of them,
+and a cone need only commute with them.
+"""
+function generators(J::Category)
+    throw(InterfaceViolation(
+        @annotated """
+        The category $J cannot be the shape of a diagram, since it does not \
+        list its generating arrows. When appropriate, you may make it a shape \
+        by overloading
+        $(overloadHint("generators", ("J", @annotated("the category $J"),
+            typeString(typeof(J)))))
+        and $(codeclr("vertices")).
+        """
+    ))
+end
+
 """
     FreeCat(vertices, arrows)
 
@@ -78,16 +124,19 @@ struct FreeCat <: Category
 end
 
 """
-    MorphFreeCat(path)
+    GenericMorphFreeCat(path)
 
 A morphism of a [`FreeCat`](@ref): a path, given as the labels of its arrows in
 the order they are followed. The empty path is the identity.
 """
-struct MorphFreeCat
+struct GenericMorphFreeCat
     path::Tuple{Vararg{Symbol}}
 end
 
-MorphFreeCat(path::AbstractVector) = MorphFreeCat(Tuple(path))
+GenericMorphFreeCat(path::AbstractVector) = GenericMorphFreeCat(Tuple(path))
+
+vertices(J::FreeCat) = J.vertices
+generators(J::FreeCat) = J.arrows
 
 # =========================================================
 # ================== REQUIRED INTERFACE ===================
@@ -107,9 +156,8 @@ function checkInCategory(obj, J::FreeCat)
     return true
 end
 
-checkInterface(::Symbol, ::FreeCat) = true
 
-function checkInCategory(morph::MorphFreeCat, H::HomLike{Symbol, Symbol, FreeCat})
+function checkInCategory(morph::GenericMorphFreeCat, H::Hom{Symbol, Symbol, FreeCat})
     J = category(H)
     current = object(domain(H))
 
@@ -148,24 +196,26 @@ function checkInCategory(morph::MorphFreeCat, H::HomLike{Symbol, Symbol, FreeCat
         ))
     end
 
-    # only identities are isomorphisms
-    if H isa Iso && !isempty(morph.path)
-        throw(NotInCategory(morph, H,
-            @annotated """
-            The path $(valclr(morph.path)) is not a morphism in $H, since the \
-            only isomorphisms of a free category are its identities.
-            """
-        ))
-    end
-
     return true
 end
 
-checkInterface(::MorphFreeCat, ::HomLike{Symbol, Symbol, FreeCat}) = true
 
 # =========================================================
 # ================ STANDARDIZED INTERFACE =================
 # =========================================================
+
+"""
+    H[path::Tuple, force=false]
+
+The path `path`, a tuple of arrow labels in the order they are followed, as a
+morphism in `H = Hom(J[:X], J[:Y])`, e.g. `Hom(J[:A], J[:C])[(:f, :g)]`; `()`
+is the identity.
+"""
+function Base.getindex(
+    H::Hom{Symbol, Symbol, FreeCat}, path::Tuple{Vararg{Symbol}}; force::Bool=false
+)
+    return H[GenericMorphFreeCat(path), force=force]
+end
 
 """
     generator(J::FreeCat, label::Symbol)
@@ -182,12 +232,12 @@ function generator(J::FreeCat, label::Symbol)
         ))
     end
     source, target = J.arrows[label]
-    return Hom(J[source], J[target])[MorphFreeCat((label,)), force=true]
+    return Hom(J[source], J[target])[GenericMorphFreeCat((label,)), force=true]
 end
 
 function compose(
-    q::OIC{MorphFreeCat, <:HomLike{Symbol, Symbol, FreeCat}},
-    p::OIC{MorphFreeCat, <:HomLike{Symbol, Symbol, FreeCat}}
+    q::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}},
+    p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}
 )
     P, Q = category(p), category(q)
 
@@ -206,13 +256,12 @@ function compose(
         ))
     end
 
-    Kind = P isa Iso && Q isa Iso ? Iso : Hom
-    return Kind(domain(P), codomain(Q))[
-        MorphFreeCat((object(p).path..., object(q).path...)), force=true
+    return Hom(domain(P), codomain(Q))[
+        GenericMorphFreeCat((object(p).path..., object(q).path...)), force=true
     ]
 end
 
-id(X::OIC{Symbol, FreeCat}) = Iso(X, X)[MorphFreeCat(()), force=true]
+id(X::OIC{Symbol, FreeCat}) = Hom(X, X)[GenericMorphFreeCat(()), force=true]
 
 """
     discreteShape(labels::Symbol...)
@@ -221,6 +270,15 @@ The free category with the vertices `labels` and no arrows, the shape of a
 product or coproduct.
 """
 discreteShape(labels::Symbol...) = FreeCat(labels, NamedTuple())
+
+"""
+    Point
+
+The terminal category, the free category with the single vertex `:pt` and no
+arrows. Its only object is `Point[:pt]`, and its only morphism is
+`id(Point[:pt])`.
+"""
+const Point = FreeCat((:pt,), NamedTuple())
 
 """
     emptyShape()
@@ -262,7 +320,28 @@ end
 
 name(X::OIC{Symbol, FreeCat}) = string(object(X))
 
-function name(p::OIC{MorphFreeCat, <:HomLike{Symbol, Symbol, FreeCat}})
+function name(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}})
     path = object(p).path
     return isempty(path) ? "id" : join(reverse(path), "∘")
+end
+
+# every path is monic and epic, since a free category cancels on both sides,
+# and only the empty paths are invertible
+isMono(::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}) = true
+isEpi(::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}) = true
+isIso(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}) = isempty(object(p).path)
+
+function Base.inv(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}; force::Bool=false)
+    # an identity, the only isomorphisms of a free category
+    if !force && !isIso(p)
+        throw(ArgumentError(
+            @annotated """
+            The path
+            $TAB$p
+            has no inverse, since the only isomorphisms of a free category \
+            are its identities.
+            """
+        ))
+    end
+    return p
 end

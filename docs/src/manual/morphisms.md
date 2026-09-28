@@ -11,41 +11,39 @@ from `D` to `C` is any object of it:
 ```julia
 D, C = FinSet[[1, 2]], FinSet[[:a, :b]]
 H = Hom(D, C)
-a, b = @ascat(D), @ascat(C)
+a, b = ascat(D), ascat(C)
 f = H[[a[1] => b[:a], a[2] => b[:b]]]   # f :: OIC{_, Hom{...}}
 ```
 
-`Epi(D, C)`, `Mono(D, C)` and `Iso(D, C)` are the same idea, restricted to
-surjective, injective, or bijective morphisms respectively. `Hom` itself does
-not know what "injective" means for an arbitrary category — it is only a tag;
-each underlying category (e.g. `CatFinSet`) decides, in its own
-`checkInCategory`, whether a given object qualifies for each kind (see
-[Morphisms of FinSet](@ref) for that example).
-
-`HomLike{DomT, CodT, CatT}` is the union of the four, for code that works the
-same way regardless of kind.
+Whether a morphism is an epimorphism, monomorphism or isomorphism is a
+property of it, not a category it is in: [`isEpi`](@ref), [`isMono`](@ref)
+and [`isIso`](@ref), which each implementation of morphisms defines (for
+finite sets, surjective, injective and bijective).
 
 ## Required Interface
 
-None of its own — `Hom`/`Epi`/`Mono`/`Iso` are always valid categories once
-`D` and `C` are objects of the same category. What is required to actually
-have objects *in* one of them is the underlying category's own interface for
-morphisms (see [Morphisms of FinSet](@ref)).
+None of its own — `Hom(D, C)` is always a valid category once `D` and `C` are
+objects of the same category. What is required to actually have objects *in*
+it is the underlying category's own interface for morphisms (see
+[Morphisms of FinSet](@ref)).
 
 ## Standardized Interface
 
-- `Kind(D, C)`, `Kind(D, C, cat)` for `Kind` one of `Hom`, `Epi`, `Mono`,
-  `Iso` — build the category; an `ArgumentError` says what is wrong when
-  `D`, `C` are not objects of one category (or of `cat`)
+- `Hom(D, C)`, `Hom(D, C, cat)` — build the category; an `ArgumentError` says
+  what is wrong when `D`, `C` are not objects of one category (or of `cat`).
+  For categories `A`, `B`, `Hom(A, B)` is `Hom(Cat[A], Cat[B])`, the functors.
 - `domain(H)`, `codomain(H)`, `category(H)` — `D`, `C`, and the shared
-  category `D`/`C` belong to.
-- `f == g`, `hash(f)` on `H`/`Epi`/`Mono`/`Iso` themselves — default identity;
-  not overloaded here (see [The category FinSet](@ref) for a discussion of
-  why equality is left as plain identity rather than made extensional).
+  category `D`/`C` belong to
+- `compose(g, f)`, `g ∘ f`, `id(D)`, `firstDifference(f, g)`, `agrees(f, g)`
+  — defined by each implementation of morphisms; calling one that is not
+  throws an `InterfaceViolation` naming the method to define
+- `isEpi(f)`, `isMono(f)`, `isIso(f)`, `inv(f; force=false)` — likewise
+- `f == g`, `hash(f)` on `H` itself — default identity; not overloaded here
+  (see [The category FinSet](@ref) for a discussion of why equality is left
+  as plain identity rather than made extensional)
 
 ## Interface Specification Assumptions
 
 - `D, C :: OIC{_, Cat}` for some shared category `Cat`.
-- `H :: HomLike{<:Any, <:Any, Cat}`, one of `Hom(D, C)`, `Epi(D, C)`,
-  `Mono(D, C)`, `Iso(D, C)`.
+- `H :: Hom{<:Any, <:Any, Cat}`, i.e. `Hom(D, C)`.
 - `f, g` are objects of `H`.

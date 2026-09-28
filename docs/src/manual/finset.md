@@ -23,7 +23,7 @@ To wrap a custom type `T` as a `FinSet`, overload:
 | Method | Signature | Meaning |
 |---|---|---|
 | `cardinality` | `cardinality(::OIC{T, CatFinSet})::Int` | the number of elements |
-| `getindex` | `Base.getindex(::OIC{T, CatFinSet}, ::Int)` | the i-th element (order not meaningful); must be an object of `@ascat X` |
+| `getindex` | `Base.getindex(::OIC{T, CatFinSet}, ::Int)` | the i-th element (order not meaningful); must be an object of `ascat(X)` |
 
 These are exactly what `checkInterface` verifies for `CatFinSet`.
 

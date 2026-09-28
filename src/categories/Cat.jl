@@ -18,7 +18,6 @@ Cat = CatCat()
 
 checkInCategory(::Category, ::CatCat) = true
 
-checkInterface(::Category, ::CatCat) = true
 
 # =========================================================
 # ======================= PRINTING ========================
@@ -34,8 +33,8 @@ name(oic::OIC{T, CatCat}) where T = name(object(oic))
 # =========================================================
 
 """
-    (F::OIC{<:Any, <:HomLike{DomT, CodT, CatCat}})(
-        morph::OIC{<:Any, <:HomLike{<:Any, <:Any, DomT}}
+    (F::OIC{<:Any, <:Hom{DomT, CodT, CatCat}})(
+        morph::OIC{<:Any, <:Hom{<:Any, <:Any, DomT}}
     )
 
 Apply the functor `F` to a morphism of its domain, giving a morphism of its
@@ -44,8 +43,8 @@ codomain.
 This generic fallback always throws an [`InterfaceViolation`](@ref); functors
 overload it for their own types.
 """
-function (F::OIC{<:Any, <:HomLike{DomT, CodT, CatCat}})(
-    morph::OIC{<:Any, <:HomLike{<:Any, <:Any, DomT}}
+function (F::OIC{<:Any, <:Hom{DomT, CodT, CatCat}})(
+    morph::OIC{<:Any, <:Hom{<:Any, <:Any, DomT}}
 ) where DomT where CodT
     throw(InterfaceViolation(
         @annotated """
@@ -64,7 +63,7 @@ function (F::OIC{<:Any, <:HomLike{DomT, CodT, CatCat}})(
                 $(typeString(typeof(category(F))))}"),
             ("m", @annotated("any morphism of \
                 $(object(domain(category(F))))"),
-                "OIC{<:Any, <:HomLike{<:Any, <:Any, $(typeString(DomT))}}"),
+                "OIC{<:Any, <:Hom{<:Any, <:Any, $(typeString(DomT))}}"),
         ))
         """
     ))

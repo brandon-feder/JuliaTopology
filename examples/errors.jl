@@ -26,16 +26,16 @@ nothing #hide
 # `show(io, x)`, used inside messages and collections, gives one line per value.
 
 S = FinSet[Set([1, 2, 3])]
-x = OIC(1, @ascat(S); force=true)
+x = OIC(1, ascat(S); force=true)
 f = OIC(:f, Hom(S, S); force=true)   ## a morphism with no behavior defined
 g = OIC(:g, Hom(x, x); force=true)   ## a morphism between elements of S
 
 println(S)            ## an object in a category
-println(x)            ## an element of @ascat S
+println(x)            ## an element of ascat(S)
 println(f)            ## a morphism in FinSet
-println(g)            ## a morphism in @ascat S
+println(g)            ## a morphism in ascat(S)
 println(FinSet)       ## a category
-println(@ascat(S))    ## an object regarded as a category
+println(ascat(S))    ## an object regarded as a category
 println(Hom(S, S))    ## a Hom category
 println([x, x])       ## inside a collection
 
@@ -82,10 +82,6 @@ demo(() -> canonicalHom(Toy, FinSet))
 
 demo(() -> OIC(3.5, Toy))
 
-# The `checkInterface` fallback warns, but does not throw:
-
-demo(() -> OIC(3, Toy))
-
 # `@checkCallable`: here, strings in `Toy` must be callable with an `Int`.
 
 checkInterface(obj::String, cat::CatToy) = @checkCallable obj cat Tuple{Int}
@@ -119,7 +115,7 @@ demo(() -> FinCard[3.5])
 
 #-
 
-demo(() -> OIC(7, @ascat(S)))
+demo(() -> OIC(7, ascat(S)))
 
 # ## How colors are applied
 #

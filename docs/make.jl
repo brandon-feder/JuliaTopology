@@ -41,6 +41,7 @@ makedocs(
             ],
             "Comma categories" => "manual/comma.md",
             "Limits and colimits" => "manual/limits.md",
+            "Opposite categories" => "manual/opposite.md",
             "Lifts (disabled)" => "manual/lifts.md",
         ],
         "API Reference" => [
@@ -53,6 +54,7 @@ makedocs(
         "Developer Docs" => [
             "Design guide" => "dev/design.md",
             "Style guide" => "dev/style.md",
+            "Design conventions" => "dev/conventions.md",
             "Writing docs and examples" => "dev/writing-docs.md",
             "Review checklist" => "dev/review-checklist.md",
         ],

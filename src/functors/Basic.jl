@@ -5,12 +5,12 @@
 """
     struct FuncIdentity end
 
-The identity functor of a category `C`, an object of `Iso(Cat[C], Cat[C])`
+The identity functor of a category `C`, an object of `Hom(Cat[C], Cat[C])`
 sending every object and morphism of `C` to itself. `id(Cat[C])` builds it.
 """
 struct FuncIdentity end
 
-function checkInCategory(obj::FuncIdentity, H::HomLike{<:Any, <:Any, CatCat})
+function checkInCategory(obj::FuncIdentity, H::Hom{<:Any, <:Any, CatCat})
     # from a category to itself
     if domain(H) != codomain(H)
         throw(NotInCategory(obj, H,
@@ -23,47 +23,52 @@ function checkInCategory(obj::FuncIdentity, H::HomLike{<:Any, <:Any, CatCat})
     return true
 end
 
-checkInterface(::FuncIdentity, ::HomLike{<:Any, <:Any, CatCat}) = true
 
-id(X::OIC{<:Category, CatCat}) = Iso(X, X)[FuncIdentity(), force=true]
+id(X::OIC{<:Category, CatCat}) = Hom(X, X)[FuncIdentity(), force=true]
 
-function (::OIC{FuncIdentity, <:HomLike{CatT, CatT, CatCat}})(
+function (::OIC{FuncIdentity, <:Hom{CatT, CatT, CatCat}})(
     obj::OIC{<:Any, CatT}
 ) where CatT
     return obj
 end
 
-function (::OIC{FuncIdentity, <:HomLike{CatT, CatT, CatCat}})(
-    morph::OIC{<:Any, <:HomLike{<:Any, <:Any, CatT}}
+function (::OIC{FuncIdentity, <:Hom{CatT, CatT, CatCat}})(
+    morph::OIC{<:Any, <:Hom{<:Any, <:Any, CatT}}
 ) where CatT
     return morph
 end
 
-name(::OIC{FuncIdentity, <:HomLike{<:Any, <:Any, CatCat}}) = "Id"
+name(::OIC{FuncIdentity, <:Hom{<:Any, <:Any, CatCat}}) = "Id"
 
 # =========================================================
-# =================== CONSTANT FUNCTORS ===================
+# =================== COMPOSITE FUNCTORS ==================
 # =========================================================
 
 """
-    FuncConstant(X)
+    FuncCompose(G, F)
 
-The functor `Δ(X)` from the terminal category [`Point`](@ref) to the category
-of `X`, an object of `Hom(Cat[Point], Cat[category(X)])`. It sends `Point[:pt]`
-to `X` and `id(Point[:pt])` to `id(X)`.
+The composite `G ∘ F` of functors `F: A → B` and `G: B → C`, an object of
+`Hom(Cat[A], Cat[C])` sending each object and morphism `x` of `A` to
+`G(F(x))`. Build it with `compose(G, F)` or `G ∘ F`.
 """
-struct FuncConstant
-    value::OIC
+struct FuncCompose
+    outer::OIC
+    inner::OIC
 end
 
-function checkInCategory(obj::FuncConstant, H::Hom{CatPoint, <:Any, CatCat})
-    # into the category of its value
-    if category(obj.value) != object(codomain(H))
-        throw(NotInCategory(obj, H,
+function checkInCategory(F::FuncCompose, H::Hom{<:Any, <:Any, CatCat})
+    # `inner` from the domain of `H`, `outer` to its codomain, meeting between
+    if !(domain(category(F.inner)) == domain(H) &&
+            codomain(category(F.outer)) == codomain(H) &&
+            codomain(category(F.inner)) == domain(category(F.outer)))
+        throw(NotInCategory(F, H,
             @annotated """
-            The constant functor at
-            $TAB$(obj.value)
-            is not a morphism in $H, since its value is not an object of \
+            The composite of
+            $TAB$(F.outer)
+            and
+            $TAB$(F.inner)
+            is not a functor in $H, since they do not go from \
+            $(object(domain(H))) through one category to \
             $(object(codomain(H))).
             """
         ))
@@ -71,20 +76,53 @@ function checkInCategory(obj::FuncConstant, H::Hom{CatPoint, <:Any, CatCat})
     return true
 end
 
-checkInterface(::FuncConstant, ::Hom{CatPoint, <:Any, CatCat}) = true
+function (F::OIC{FuncCompose, <:Hom{DomT, <:Any, CatCat}})(x::OIC{<:Any, DomT}) where DomT
+    return object(F).outer(object(F).inner(x))
+end
 
-function (F::OIC{FuncConstant, <:Hom{CatPoint, <:Any, CatCat}})(
-    ::OIC{Symbol, CatPoint}
+function (F::OIC{FuncCompose, <:Hom{DomT, <:Any, CatCat}})(
+    m::OIC{<:Any, <:Hom{<:Any, <:Any, DomT}}
+) where DomT
+    return object(F).outer(object(F).inner(m))
+end
+
+name(F::OIC{FuncCompose, <:Hom{<:Any, <:Any, CatCat}}) =
+    "$(shortName(object(F).outer)) ∘ $(shortName(object(F).inner))"
+
+"""
+    compose(G, F)
+    G ∘ F
+
+The composite of functors `F: A → B` and `G: B → C`, applying `F` first. An
+identity functor drops out, and a diagram followed by a functor is again a
+diagram, of the same shape (its pushforward); otherwise the composite is a
+[`FuncCompose`](@ref).
+"""
+function compose(
+    G::OIC{<:Any, <:Hom{<:Any, <:Any, CatCat}}, F::OIC{<:Any, <:Hom{<:Any, <:Any, CatCat}}
 )
-    return object(F).value
+    # `F` lands where `G` starts
+    if codomain(category(F)) != domain(category(G))
+        throw(ArgumentError(
+            @annotated """
+            The functors
+            $TAB$G
+            and
+            $TAB$F
+            cannot be composed, since the second lands in \
+            $(object(codomain(category(F)))) but the first starts at \
+            $(object(domain(category(G)))).
+            """
+        ))
+    end
+
+    object(F) isa FuncIdentity && return G
+    object(G) isa FuncIdentity && return F
+    if object(F) isa FuncDiagram
+        J, C = shape(F), object(codomain(category(G)))
+        return diagram(J, C; force=true, (v => G(F(v)) for v in vertices(J))...,
+            (a => G(F(a)) for a in keys(generators(J)))...)
+    end
+    return Hom(domain(category(F)), codomain(category(G)))[FuncCompose(G, F), force=true]
 end
 
-function (F::OIC{FuncConstant, <:Hom{CatPoint, <:Any, CatCat}})(
-    ::OIC{MorphPoint, <:HomLike{Symbol, Symbol, CatPoint}}
-)
-    return id(object(F).value)
-end
-
-function name(F::OIC{FuncConstant, <:Hom{CatPoint, <:Any, CatCat}})
-    return "Δ($(shortName(object(F).value)))"
-end

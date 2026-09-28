@@ -6,8 +6,8 @@
 using JuliaTopology
 
 A, B, C = FinSet[1:4], FinSet[[:a, :b]], FinSet[[:even, :odd]]
-a, b, c = @ascat(A), @ascat(B), @ascat(C)
-parity = Hom(A, C)[x -> c[iseven(object(x)) ? :even : :odd]]
+a, b, c = ascat(A), ascat(B), ascat(C)
+parity = Hom(A, C)[x -> iseven(x) ? :even : :odd, values=true]
 nothing #hide
 
 # ## Diagrams
@@ -25,6 +25,10 @@ D = parallelPair(parity, allOdd)
 
 P = product(A, B)
 apex(P)
+
+# `A × B` is the same set, for when only the set is wanted:
+
+cardinality(A × B)
 
 #-
 
@@ -54,7 +58,7 @@ collect(apex(PB))
 # `canonicalHom`:
 
 X = FinSet[[:x, :y]]
-x = @ascat(X)
+x = ascat(X)
 cone = Cone(discrete(A, B))[
     (X1 = Hom(X, A)[t -> a[1]], X2 = Hom(X, B)[t -> t == x[:x] ? b[:a] : b[:b]])]
 canonicalHom(cone, P)

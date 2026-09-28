@@ -134,7 +134,7 @@ typeString(T) = replace(string(T), "ObjectInCategory{" => "OIC{")
 # The categories an argument of a method required by `cat` is likely to belong
 # to: `cat` itself and, for morphisms, their domain and codomain as categories
 relatedCategories(cat) = Any[cat]
-relatedCategories(cat::HomLike) = Any[cat, OICAsCat(domain(cat)),
+relatedCategories(cat::Hom) = Any[cat, OICAsCat(domain(cat)),
     OICAsCat(codomain(cat)), category(cat)]
 
 # English description of an argument of type `T` in a required method of
@@ -183,11 +183,12 @@ coloredPrint(cat::Category) = catclr(name(cat))
 
 coloredPrint(oic::OIC) = objclr(shortName(oic))*" ∈ "*coloredPrint(category(oic))
 
-coloredPrint(cat::OICAsCat) = catclr("@ascat ")*objclr(shortName(oic(cat)))
+coloredPrint(cat::OICAsCat) = catclr("ascat(")*objclr(shortName(oic(cat)))*catclr(")")
 
-function coloredPrint(hom::HomLike)
-    kind = string(nameof(typeof(hom)))
-    return catclr("$kind(")*objclr(shortName(domain(hom)))*catclr(", ")*
+name(H::Hom) = "Hom($(shortName(domain(H))), $(shortName(codomain(H))))"
+
+function coloredPrint(hom::Hom)
+    return catclr("Hom(")*objclr(shortName(domain(hom)))*catclr(", ")*
         objclr(shortName(codomain(hom)))*catclr(")")
 end
 
@@ -224,7 +225,7 @@ function treeNode(cat::OICAsCat; withcat=true)
     return coloredPrint(cat), ["of" => oic(cat)]
 end
 
-function treeNode(hom::HomLike; withcat=true)
+function treeNode(hom::Hom; withcat=true)
     return coloredPrint(hom), [
         "domain" => (domain(hom), false),
         "codomain" => (codomain(hom), false),

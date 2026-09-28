@@ -150,8 +150,9 @@ macro checkMethod(object, category, f, argtypes)
 end
 
 # Signatures of generic methods which only throw an error explaining that
-# something is not implemented, e.g. applying a morphism to an element. Finding
-# one of these does not count as being callable in `@checkCallable`.
+# something is not implemented, e.g. applying a morphism to an element or
+# composing morphisms. Finding one of these does not count as an
+# implementation, in `@checkCallable` or `hasNonFallbackMethod`.
 const FALLBACK_SIGNATURES = Type[]
 
 # Whether calling with argument types `sig` has a method other than a fallback
@@ -213,31 +214,14 @@ end
 """
     checkInterface(object, category::Category)
 
-Checks whether `object` satisfies the interface required by `category`. This
-generic fallback matches any category that hasn't defined its own, more specific
-method, but it warns that no such check exists, then returns `true` rather than
-erroring. Define `checkInterface(obj::SomeType, cat::SomeCategory) = ...`
-to actually enforce an interface for a given category. Such methods should
-return `true` or throw an [`InterfaceViolation`](@ref) explaining what is
-wrong.
+Checks whether `object` satisfies the interface required by `category`,
+returning `true` or throwing an [`InterfaceViolation`](@ref) explaining what is
+missing. This generic fallback matches any category that hasn't defined its
+own, more specific method, and returns `true`: a category requires nothing of
+its objects unless it says so, by defining
+`checkInterface(obj::SomeType, cat::SomeCategory) = ...`.
 """
-function checkInterface(object, category::Category)
-    @warn (@annotated """
-    The category $category does not check that its objects represented by \
-    values of type $(dtclr(typeString(typeof(object)))) have the methods it \
-    requires, such as when wrapping
-    $TAB$(valclr(object)).
-    This warning is shown once for each such type. You may ignore it, or, \
-    when appropriate, add the check by overloading
-    $(overloadHint("checkInterface",
-        ("obj", @annotated("any value of type \
-            $(dtclr(typeString(typeof(object))))"), typeString(typeof(object))),
-        ("cat", @annotated("the category $category"),
-            typeString(typeof(category))),
-    ))
-    """) _id=(typeof(object), typeof(category)) maxlog=1
-    return true
-end
+checkInterface(object, category::Category) = true
 
 """
     X ∈ Cat
@@ -290,7 +274,7 @@ Base.getindex(C::Category, x; force::Bool=false) = ObjectInCategory(x, C; force=
     struct OICAsCat{Obj, Cat}
 
 The category whose objects are the elements of `X :: ObjectInCategory{Obj,
-Cat}`, written `@ascat X`. See [Categories](@ref).
+Cat}`, written `ascat(X)`. See [Categories](@ref).
 """
 struct OICAsCat{Obj, Cat} <: Category
     oic::OIC{Obj, Cat}
@@ -299,17 +283,17 @@ end
 """
     oic(cat::OICAsCat)
 
-The `ObjectInCategory` that `cat` (i.e. `@ascat oic(cat)`) is the elements of.
+The `ObjectInCategory` that `cat` (i.e. `ascat(oic(cat))`) is the elements of.
 """
 function oic(cat::OICAsCat{Obj, Cat}) where Obj where Cat
     return cat.oic
 end
 
 """
-    @ascat oic
+    ascat(X)
 
-Construct an [`OICAsCat`](@ref) from an [`ObjectInCategory`](@ref)
+The object `X` regarded as a category, whose objects are its elements: an
+[`OICAsCat`](@ref). `ascat(X)[x]` is the element `x` of `X`, and
+[`oic`](@ref) goes back to `X`.
 """
-macro ascat(oic)
-    return :($OICAsCat($(esc(oic))))
-end
+ascat(X::OIC) = OICAsCat(X)

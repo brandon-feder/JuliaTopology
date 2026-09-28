@@ -3,7 +3,7 @@
 # =========================================================
 
 function checkInterface(
-    obj, cat::HomLike{DomT, CodT, CatFinSet}
+    obj, cat::Hom{DomT, CodT, CatFinSet}
 ) where DomT where CodT
     return @checkCallable obj cat Tuple{OIC{<:Any, OICAsCat{DomT, CatFinSet}}}
 end
@@ -13,17 +13,15 @@ end
 # =========================================================
 
 """
-    struct GenericMorphFinSet{DomT, CodT}
+    GenericMorphFinSet(pairs)
 
-An implementation for morphisms in `CatFinSet` which stores
-maps as instances of an `AbstractDictionary`, from elements of
-`@ascat domain` to elements of `@ascat codomain`. Constructing one checks
-nothing; whether it is well defined, and injective or surjective, is checked
-when it is wrapped in a `Hom`, `Epi`, `Mono` or `Iso`.
+An implementation for morphisms in `CatFinSet` which stores a map as an
+`AbstractDict`, from elements of `ascat(X)` to elements of `ascat(Y)`; its
+domain `X` and codomain `Y` are those of the `Hom(X, Y)` it is wrapped in.
+Constructing one checks nothing; whether it is a well defined map is checked
+when it is wrapped.
 """
-struct GenericMorphFinSet{DomT, CodT}
-    domain::OIC{DomT, CatFinSet}
-    codomain::OIC{CodT, CatFinSet}
+struct GenericMorphFinSet
     pairs::AbstractDict
 end
 
@@ -32,43 +30,17 @@ end
 # =========================================================
 
 function checkInCategory(
-    morph::GenericMorphFinSet, H::HomLike{<:Any, <:Any, CatFinSet}
+    morph::GenericMorphFinSet, H::Hom{<:Any, <:Any, CatFinSet}
 )
     dom, cod = OICAsCat(domain(H)), OICAsCat(codomain(H))
     mapname = objclr(name(OIC(morph, H; force=true)))
-
-    # the same domain as `H`
-    if morph.domain != domain(H)
-        throw(NotInCategory(morph, H,
-            @annotated """
-            The map
-            $TAB$mapname
-            is not a morphism in $H, since its domain is \
-            $(objclr(shortName(morph.domain))) rather than \
-            $(objclr(shortName(domain(H)))).
-            """
-        ))
-    end
-
-    # the same codomain as `H`
-    if morph.codomain != codomain(H)
-        throw(NotInCategory(morph, H,
-            @annotated """
-            The map
-            $TAB$mapname
-            is not a morphism in $H, since its codomain is \
-            $(objclr(shortName(morph.codomain))) rather than \
-            $(objclr(shortName(codomain(H)))).
-            """
-        ))
-    end
 
     # every key is an element of the domain
     for x in keys(morph.pairs)
         x isa OIC && category(x) == dom && continue
         hint = x isa OIC || !(x in dom) ? "" : @annotated(" It is a plain \
             value, which must first be wrapped as an element, e.g. as \
-            $(codeclr("(@ascat X)[x]")).")
+            $(codeclr("ascat(X)[x]")).")
         throw(NotInCategory(morph, H,
             @annotated """
             The map
@@ -100,7 +72,7 @@ function checkInCategory(
         y isa OIC && category(y) == cod && continue
         hint = y isa OIC || !(y in cod) ? "" : @annotated(" It is a plain \
             value, which must first be wrapped as an element, e.g. as \
-            $(codeclr("(@ascat X)[x]")).")
+            $(codeclr("ascat(X)[x]")).")
         throw(NotInCategory(morph, H,
             @annotated """
             The map
@@ -112,60 +84,63 @@ function checkInCategory(
         ))
     end
 
-    # injective, for `Mono` and `Iso`
-    if H isa Union{Mono, Iso}
-        preimage = Dict{Any, Any}()
-        for x in oic(dom)
-            y = morph.pairs[x]
-            if haskey(preimage, y)
-                throw(NotInCategory(morph, H,
-                    @annotated """
-                    The map
-                    $TAB$mapname
-                    is not a morphism in $H, since it is not injective: \
-                    $(objclr(name(preimage[y]))) and $(objclr(name(x))) both \
-                    map to $(objclr(name(y))).
-                    """
-                ))
-            end
-            preimage[y] = x
-        end
-    end
-
-    # surjective, for `Epi` and `Iso`
-    if H isa Union{Epi, Iso}
-        image = Set(values(morph.pairs))
-        missed = [y for y in oic(cod) if !(y in image)]
-        if !isempty(missed)
-            throw(NotInCategory(morph, H,
-                @annotated """
-                The map
-                $TAB$mapname
-                is not a morphism in $H, since it is not surjective: nothing \
-                maps to \
-                $(join([objclr(name(y)) for y in first(missed, MAX_SET_MAP_PAIRS_SHOWN)],
-                    ", "))$(length(missed) > MAX_SET_MAP_PAIRS_SHOWN ? ", …" : "").
-                """
-            ))
-        end
-    end
-
     return true
 end
 
-function (morph::OIC{GenericMorphFinSet{DomT, CodT}, <:HomLike{DomT, CodT, CatFinSet}})(
+function (morph::OIC{GenericMorphFinSet, <:Hom{DomT, <:Any, CatFinSet}})(
     elem::OIC{<:Any, OICAsCat{DomT, CatFinSet}}
-) where DomT where CodT
+) where DomT
     return object(morph).pairs[elem]
 end
 
-# The inverse of an isomorphism, sending each value back to its key
-function Base.inv(
-    f::OIC{GenericMorphFinSet{DomT, CodT}, Iso{DomT, CodT, CatFinSet}}
-) where DomT where CodT
+"""
+    isMono(f)
+
+Whether the map `f` of finite sets is injective, i.e. a monomorphism.
+"""
+function isMono(f::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}})
+    values = [f(x) for x in domain(category(f))]
+    return allunique(values)
+end
+
+"""
+    isEpi(f)
+
+Whether the map `f` of finite sets is surjective, i.e. an epimorphism.
+"""
+function isEpi(f::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}})
+    image = Set(f(x) for x in domain(category(f)))
+    return all(y -> y in image, codomain(category(f)))
+end
+
+"""
+    isIso(f)
+
+Whether the map `f` of finite sets is bijective, i.e. an isomorphism.
+"""
+isIso(f::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}}) = isMono(f) && isEpi(f)
+
+"""
+    inv(f; force=false)
+
+The inverse of a bijective map `f` of finite sets, sending each value back to
+the element it came from. Throws an `ArgumentError` unless `f` is a bijection;
+`force=true` skips this check, which evaluates `f` on its whole domain.
+"""
+function Base.inv(f::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}}; force::Bool=false)
+    # bijective
+    if !force && !isIso(f)
+        throw(ArgumentError(
+            @annotated """
+            The map
+            $TAB$f
+            has no inverse, since it is not a bijection.
+            """
+        ))
+    end
     H = category(f)
-    return Iso(codomain(H), domain(H))[
-        Dict(y => x for (x, y) in object(f).pairs)
+    return Hom(codomain(H), domain(H))[
+        Dict(f(x) => x for x in domain(H)), force=true
     ]
 end
 
@@ -176,7 +151,7 @@ end
 """
     FunctionDict(domain, f)
 
-A lazy `AbstractDict` sending each element `x` of `@ascat domain` to `f(x)`,
+A lazy `AbstractDict` sending each element `x` of `ascat(domain)` to `f(x)`,
 computed on lookup rather than stored. Used as the pairs of a
 [`GenericMorphFinSet`](@ref), e.g. through `H[f::Function]`.
 """
@@ -210,16 +185,13 @@ end
 
 """
     compose(g, f)
-    g ∘ f
 
 The composite of morphisms `f: X → Y` and `g: Y → Z` of FinSet, sending `x` to
-`g(f(x))`, computed lazily. It lies in `Iso(X, Z)` when both are isomorphisms,
-in `Mono(X, Z)` when both are monomorphisms, in `Epi(X, Z)` when both are
-epimorphisms, and in `Hom(X, Z)` otherwise.
+`g(f(x))`, computed lazily.
 """
 function compose(
-    g::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}},
-    f::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}}
+    g::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}},
+    f::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}}
 )
     G, F = category(g), category(f)
 
@@ -238,33 +210,23 @@ function compose(
         ))
     end
 
-    Kind = F isa Iso && G isa Iso ? Iso :
-        F isa Union{Iso, Mono} && G isa Union{Iso, Mono} ? Mono :
-        F isa Union{Iso, Epi} && G isa Union{Iso, Epi} ? Epi : Hom
-    return Kind(domain(F), codomain(G))[x -> g(f(x)), force=true]
-end
-
-function Base.:∘(
-    g::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}},
-    f::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}}
-)
-    return compose(g, f)
+    return Hom(domain(F), codomain(G))[x -> g(f(x)), force=true]
 end
 
 """
     firstDifference(f, g)
 
 For maps `f, g: X → Y` of finite sets, `nothing` when they agree on every
-element of `X`, and otherwise `(at = x, left = f(x), right = g(x))` for the
+element of `X`, and otherwise `(path = (x,), left = f(x), right = g(x))` for the
 first element `x` where they differ.
 """
 function firstDifference(
-    f::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}},
-    g::OIC{<:Any, <:HomLike{<:Any, <:Any, CatFinSet}}
+    f::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}},
+    g::OIC{<:Any, <:Hom{<:Any, <:Any, CatFinSet}}
 )
     for x in domain(category(f))
         fx, gx = f(x), g(x)
-        fx != gx && return (at = x, left = fx, right = gx)
+        fx != gx && return (path = (x,), left = fx, right = gx)
     end
     return nothing
 end
@@ -272,32 +234,40 @@ end
 """
     id(X::OIC{<:Any, CatFinSet})
 
-The identity map of the finite set `X`, in `Iso(X, X)`.
+The identity map of the finite set `X`.
 """
-id(X::OIC{<:Any, CatFinSet}) = Iso(X, X)[identity, force=true]
+id(X::OIC{<:Any, CatFinSet}) = Hom(X, X)[identity, force=true]
 
 # =========================================================
 # ===================== CONSTRUCTION ======================
 # =========================================================
 
 """
-    H[pairs, force=false]
+    H[pairs, force=false, values=false]
 
-Construct the morphism in `H :: HomLike{<:Any, <:Any, CatFinSet}` sending `x` to
+Construct the morphism in `H :: Hom{<:Any, <:Any, CatFinSet}` sending `x` to
 `y` for each `x => y` in `pairs`, a vector of pairs or an `AbstractDict`, where
-each `x` is an element of `@ascat domain(H)` and each `y` one of
-`@ascat codomain(H)`, e.g. `Hom(A, B)[[(@ascat A)[1] => (@ascat B)[2]]]`. Throws
+each `x` is an element of `ascat(domain(H))` and each `y` one of
+`ascat(codomain(H))`, e.g. `Hom(A, B)[[ascat(A)[1] => ascat(B)[2]]]`. With
+`values=true`, each `x` and `y` is a plain value instead, which is wrapped, e.g.
+`Hom(A, B)[[1 => 2], values=true]`. Throws
 an `ArgumentError` for a malformed `pairs` (an entry which is not a pair, an `x`
 or `y` which is not such an element, or an `x` given twice), and otherwise a
 `NotInCategory` unless the map lies in `H` (see `checkInCategory`).
 `force=true` skips all checks.
 """
 function Base.getindex(
-    H::HomLike{DomT, CodT, CatFinSet},
+    H::Hom{DomT, CodT, CatFinSet},
     pairs::Union{AbstractVector, AbstractDict};
-    force::Bool=false
+    force::Bool=false, values::Bool=false
 ) where DomT where CodT
     dom, cod = OICAsCat(domain(H)), OICAsCat(codomain(H))
+
+    # given as plain values, wrapped as elements, each checked unless `force`
+    if values
+        pairs = [p isa Pair ? (dom[first(p), force=force] => cod[last(p), force=force]) : p
+            for p in pairs]
+    end
 
     # `pairs` can be made into a `Dict` of elements: each entry is a pair of an
     # element of `dom` and one of `cod`, and no element of `dom` is given twice
@@ -327,7 +297,7 @@ function Base.getindex(
                         $TAB$(valclr(v))
                         is a plain value, but the keys and values must be \
                         elements of $dom and $cod. You may wrap it, e.g. as \
-                        $(codeclr("(@ascat X)[$(repr(v))]")), or take the \
+                        $(codeclr("ascat(X)[$(repr(v))]")), or take the \
                         elements from iterating over the domain and codomain.
                         """
                     ))
@@ -370,24 +340,33 @@ function Base.getindex(
         end
     end
 
-    morph = GenericMorphFinSet(domain(H), codomain(H), Dict(pairs))
+    morph = GenericMorphFinSet(Dict(pairs))
     return ObjectInCategory(morph, H; force=force)
 end
 
 """
-    H[f::Function, force=false]
+    H[f::Function, force=false, values=false]
 
-Construct the morphism in `H :: HomLike{<:Any, <:Any, CatFinSet}` sending each
-element `x` of `@ascat domain(H)` to `f(x)`, which must be an element of
-`@ascat codomain(H)`, e.g. `Hom(A, B)[x -> (@ascat B)[2 * object(x)]]`. The map
-is lazy: `f` is called on each lookup. Throws a `NotInCategory` unless the map
+Construct the morphism in `H :: Hom{<:Any, <:Any, CatFinSet}` sending each
+element `x` of `ascat(domain(H))` to `f(x)`, which must be an element of
+`ascat(codomain(H))`, e.g. `Hom(A, B)[x -> ascat(B)[2 * object(x)]]`. With
+`values=true`, `f` takes and returns plain values instead, e.g.
+`Hom(A, B)[x -> 2x, values=true]`. The map is lazy: `f` is called on each
+lookup. Throws a `NotInCategory` unless the map
 lies in `H` (see `checkInCategory`), which evaluates `f` on the whole domain;
 `force=true` skips this.
 """
 function Base.getindex(
-    H::HomLike{DomT, CodT, CatFinSet}, f::Function; force::Bool=false
+    H::Hom{DomT, CodT, CatFinSet}, f::Function; force::Bool=false,
+    values::Bool=false
 ) where DomT where CodT
-    morph = GenericMorphFinSet(domain(H), codomain(H), FunctionDict(domain(H), f))
+    # on plain values: unwrap each element, and wrap its image, checked unless
+    # `force`
+    if values
+        cod, g = OICAsCat(codomain(H)), f
+        f = x -> cod[g(object(x)), force=force]
+    end
+    morph = GenericMorphFinSet(FunctionDict(domain(H), f))
     return ObjectInCategory(morph, H; force=force)
 end
 
@@ -398,13 +377,13 @@ end
 # The mapping in the order of the domain, e.g. `{1 ↦ :a, 2 ↦ :b, 3 ↦ :c, …}`,
 # with `?` for any element a forced, incomplete map leaves unmapped, and a
 # plain value shown by its `repr`
-function name(oic::OIC{<:GenericMorphFinSet})
-    morph = object(oic)
+function name(oic::OIC{GenericMorphFinSet})
+    morph, X = object(oic), domain(category(oic))
     shown = [
         "$(name(a)) ↦ $(!haskey(morph.pairs, a) ? "?" :
             morph.pairs[a] isa OIC ? name(morph.pairs[a]) : repr(morph.pairs[a]))"
-        for a in Iterators.take(morph.domain, MAX_SET_MAP_PAIRS_SHOWN)
+        for a in Iterators.take(X, MAX_SET_MAP_PAIRS_SHOWN)
     ]
-    length(morph.domain) > MAX_SET_MAP_PAIRS_SHOWN && push!(shown, "…")
+    cardinality(X) > MAX_SET_MAP_PAIRS_SHOWN && push!(shown, "…")
     return "{$(join(shown, ", "))}"
 end

@@ -22,7 +22,7 @@ Pkg.add(url="https://github.com/brandon-feder/JuliaTopology.git")
 using JuliaTopology
 
 A, B = FinSet[1:3], FinSet[[:a, :b]]
-a, b = @ascat(A), @ascat(B)
+a, b = ascat(A), ascat(B)
 f = Hom(A, B)[[a[1] => b[:a], a[2] => b[:b], a[3] => b[:a]]]
 f(a[2])
 ```
