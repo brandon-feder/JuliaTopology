@@ -1,80 +1,51 @@
 @testset "Syntax" begin
-    A, B, C = FinSet[1:3], FinSet[[:a, :b]], FinSet[1:6]
-    a, b, c = ascat(A), ascat(B), ascat(C)
+    qp = q ∘ p
 
     @testset "ascat" begin
-        @test ascat(A) == OICAsCat(A) && oic(ascat(A)) === A
-        @test object(ascat(A)[2]) == 2
-    end
-
-    @testset "values=true" begin
-        f = Hom(A, C)[x -> 2x, values=true]
-        @test [object(f(x)) for x in A] == [2, 4, 6]
-        @test_throws NotInCategory Hom(A, C)[x -> 7x, values=true]
-        g = Hom(A, B)[[1 => :a, 2 => :b, 3 => :a], values=true]
-        @test g(a[2]) == b[:b]
-        @test_throws NotInCategory Hom(A, B)[[1 => :z], values=true]
-        @test_throws ArgumentError Hom(A, B)[[1 => :a, 2], values=true]
+        @test ascat(X) == OICAsCat(X) && oic(ascat(X)) === X
     end
 
     @testset "∘ and agrees" begin
-        f = Hom(A, A)[x -> a[1]]
-        @test agrees(f ∘ id(A), f) && !agrees(f, id(A))
-        J = FreeCat((:X, :Y, :Z), (p = :X => :Y, q = :Y => :Z))
-        @test object(generator(J, :q) ∘ generator(J, :p)).path == (:p, :q)
+        @test agrees(q ∘ p, compose(q, p)) && !agrees(r, q ∘ p)
+        @test agrees(p ∘ id(X), p)
     end
 
     @testset "Hom between categories" begin
-        @test Hom(FinSet, FinCard) == Hom(Cat[FinSet], Cat[FinCard])
-        @test Hom(FinSet, FinSet)[FuncIdentity()] == id(Cat[FinSet])
+        @test Hom(C, FinCard) == Hom(Cat[C], Cat[FinCard])
+        @test Hom(C, C)[FuncIdentity()] == id(Cat[C])
     end
 
     @testset "diagrams" begin
-        f = Hom(A, B)[x -> b[:a]]
-        D = diagram(parallelPairShape(); X = A, Y = B, f = f, g = f)
-        @test D == diagram(parallelPairShape(), FinSet; X = A, Y = B, f = f, g = f)
-        @test D(:X) === A && D(:f) === f
-        @test_throws ArgumentError D(:z)
-        @test_throws ArgumentError diagram(emptyShape())
+        D = diagram(parallelPairShape(), (X, Z), (r, qp))
+        @test D == diagram(parallelPairShape(), C, (X, Z), (r, qp))
+        @test D == parallelPair(r, qp)
+        @test_throws ArgumentError diagram(emptyShape(), ())
         @test shape(D) == parallelPairShape()
         @test diagram(Cone(D)) == D && diagram(Cocone(D)) == D
     end
 
     @testset "data in brackets" begin
-        J = FreeCat((:X, :Y, :Z), (p = :X => :Y, q = :Y => :Z))
-        @test Hom(J[:X], J[:Z])[(:p, :q)] == Hom(J[:X], J[:Z])[GenericMorphFreeCat((:p, :q))]
-        @test Hom(J[:X], J[:X])[()] == id(J[:X])
+        @test Hom(X, Z)[(1, 2)] == Hom(X, Z)[GenericMorphFreeCat((1, 2))]
+        @test Hom(X, X)[()] == id(X)
 
-        D = diagram(parallelPairShape(); X = A, Y = A, f = id(A), g = id(A))
-        K = FunctorCat(parallelPairShape(), FinSet)
-        @test Hom(K[D], K[D])[(X = id(A), Y = id(A))] == id(K[D])
+        D = parallelPair(id(X), id(X))
+        K = FunctorCat(parallelPairShape(), C)
+        @test agrees(Hom(K[D], K[D])[(id(X), id(X))], id(K[D]))
 
-        I = id(Cat[FinSet])
-        h = Hom(A, B)[x -> b[:a]]
-        o = (I ↓ I)[(A, B, h)]
-        @test o == (I ↓ I)[GenericComma(A, B, h)]
-        @test Hom(o, o)[(id(A), id(B))] == id(o)
+        I = id(Cat[C])
+        o = (I ↓ I)[(X, Y, p)]
+        @test o == (I ↓ I)[GenericComma(X, Y, p)]
+        @test Hom(o, o)[(id(X), id(Y))] == id(o)
     end
 
     @testset "componentwise isomorphisms" begin
-        σ = Hom(A, A)[x -> mod1(x + 1, 3), values=true]
-        D = diagram(parallelPairShape(); X = A, Y = A, f = id(A), g = id(A))
-        K = FunctorCat(parallelPairShape(), FinSet)
-        η = Hom(K[D], K[D])[(X = σ, Y = σ)]
-        @test isIso(η) && isMono(η) && isEpi(η)
-        @test agrees(compose(inv(η), η), id(K[D]))
-        k = Hom(A, A)[x -> a[1]]
-        @test_throws ArgumentError inv(Hom(K[D], K[D])[(X = k, Y = k)])
-
-        S = Slice(A)
-        f, g = S[id(A)], S[σ]
-        m = Hom(f, g)[inv(σ)]
-        @test isIso(m) && agrees(apexMorphism(inv(m)), σ)
-        @test inv(id(Point[:pt])) == id(Point[:pt])
-    end
-
-    @testset "× and ⊔" begin
-        @test cardinality(A × B) == 6
-        @test cardinality(A ⊔ B) == 5
+        D = parallelPair(qp, qp)
+        K = FunctorCat(parallelPairShape(), C)
+        @test isIso(id(K[D])) && agrees(inv(id(K[D])), id(K[D]))
+        η = Hom(K[D], K[parallelPair(qp, qp)])[(id(X), id(Z))]
+        @test isIso(η)
+        Δ = diagonal(parallelPairShape(), C)
+        @test_throws ArgumentError inv(Hom(K[parallelPair(r, r)], Δ(Z))[(r, id(Z))])
+        @test inv(id(Point[1])) == id(Point[1])
     end
 end

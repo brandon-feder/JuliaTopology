@@ -1,46 +1,39 @@
 # a functor defining how it maps objects, but nothing else
 struct ObjectsOnly end
-JuliaTopology.checkInCategory(::ObjectsOnly, ::Hom{CatFinSet, CatFinSet, CatCat}) = true
-(::OIC{ObjectsOnly, <:Hom{CatFinSet, CatFinSet, CatCat}})(X::OIC{<:Any, CatFinSet}) = X
+JuliaTopology.checkInCategory(::ObjectsOnly, ::Hom{FreeCat, FreeCat, CatCat}) = true
+(::OIC{ObjectsOnly, <:Hom{FreeCat, FreeCat, CatCat}})(A::OIC{Int, FreeCat}) = A
 
 # a morphism of FinCard defining nothing
 struct Opaque end
 JuliaTopology.checkInCategory(::Opaque, ::Hom{Int, Int, CatFinCard}) = true
 
 @testset "Functors" begin
-    A = FinSet[1:3]
-    a = ascat(A)
-    f = Hom(A, A)[x -> a[1]]
-
     @testset "Point" begin
-        pt = Point[:pt]
-        @test_throws NotInCategory Point[:x]
-        @test_throws NotInCategory Point[1]
+        pt = Point[1]
+        @test_throws NotInCategory Point[2]
+        @test_throws NotInCategory Point[:pt]
         @test isIso(id(pt))
         @test compose(id(pt), id(pt)) == id(pt)
     end
 
     @testset "FuncIdentity" begin
-        I = id(Cat[FinSet])
+        I = id(Cat[C])
         @test category(I) isa Hom
-        @test I(A) === A
-        @test I(f) === f
-        @test_throws NotInCategory Hom(Cat[FinSet], Cat[FinCard])[FuncIdentity()]
+        @test I(X) === X
+        @test I(p) === p
+        @test_throws NotInCategory Hom(Cat[C], Cat[FinCard])[FuncIdentity()]
     end
 
     @testset "constant" begin
-        D = constant(A)
-        @test D(Point[:pt]) === A
-        @test D(id(Point[:pt])) == id(A)
-        @test D == constant(A)
-    end
-
-    @testset "morphism fallback" begin
-        @test_throws InterfaceViolation Hom(Cat[FinSet], Cat[FinSet])[ObjectsOnly()](f)
+        D = constant(X)
+        @test D(Point[1]) === X
+        @test D(id(Point[1])) == id(X)
+        @test D == constant(X)
     end
 
     @testset "fallbacks for undefined operations" begin
-        F = Hom(Cat[FinSet], Cat[FinSet])[ObjectsOnly()]   # Cat defines none of these
+        F = Hom(Cat[C], Cat[C])[ObjectsOnly()]
+        @test_throws InterfaceViolation F(p)                 # no action on morphisms
         o = Hom(FinCard[1], FinCard[1])[Opaque()]
         @test_throws InterfaceViolation compose(o, o)
         @test_throws InterfaceViolation firstDifference(F, F)
@@ -52,17 +45,16 @@ JuliaTopology.checkInCategory(::Opaque, ::Hom{Int, Int, CatFinCard}) = true
     end
 
     @testset "composition in Cat" begin
-        F = Hom(Cat[FinSet], Cat[FinSet])[ObjectsOnly()]
+        F = Hom(Cat[C], Cat[C])[ObjectsOnly()]
         G = F ∘ F
-        @test object(G) isa FuncCompose && G(A) === A
-        @test id(Cat[FinSet]) ∘ F === F && F ∘ id(Cat[FinSet]) === F
+        @test object(G) isa FuncCompose && G(X) === X
+        @test id(Cat[C]) ∘ F === F && F ∘ id(Cat[C]) === F
         @test_throws ArgumentError F ∘ id(Cat[FinCard])
 
         # a diagram followed by a functor is a diagram
-        D = constant(A)
-        @test (id(Cat[FinSet]) ∘ D) === D
-        @test constant(A) ∘ toPoint(parallelPairShape()) ==
-            object(diagonal(parallelPairShape(), FinSet)(A))
+        D = constant(X)
+        @test (id(Cat[C]) ∘ D) === D
+        @test constant(X) ∘ toPoint(parallelPairShape()) ==
+            object(diagonal(parallelPairShape(), C)(X))
     end
 end
-

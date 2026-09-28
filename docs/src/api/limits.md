@@ -4,9 +4,9 @@ CurrentModule = JuliaTopology
 
 # Limits and colimits
 
-Limits and colimits of finite sets.
+Limits and colimits, in any category that computes them.
 
 ```@autodocs
 Modules = [JuliaTopology]
-Pages = ["LimitsFinSet.jl"]
+Pages = ["categories/Limits.jl"]
 ```

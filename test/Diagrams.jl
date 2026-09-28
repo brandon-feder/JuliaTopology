@@ -1,77 +1,93 @@
 # a shape which is not a `FreeCat`: two objects and one arrow between them
 struct WalkingArrow <: Category end
-JuliaTopology.vertices(::WalkingArrow) = (:A, :B)
-JuliaTopology.generators(::WalkingArrow) = (f = :A => :B,)
+JuliaTopology.nvertices(::WalkingArrow) = 2
+JuliaTopology.generators(::WalkingArrow) = (1 => 2,)
 JuliaTopology.checkInCategory(x, J::WalkingArrow) =
-    x in (:A, :B) || throw(NotInCategory(x, J, "not a vertex"))
+    x in (1, 2) || throw(NotInCategory(x, J, "not a vertex"))
 
 @testset "Diagrams" begin
-    A, B = FinSet[1:3], FinSet[1:2]
-    a, b = ascat(A), ascat(B)
-    f = Hom(A, B)[x -> b[mod1(object(x), 2)]]
-    g = Hom(A, B)[x -> b[1]]
     J = parallelPairShape()
-    D = parallelPair(f, g)
+    qp = q ∘ p
+    D = parallelPair(r, qp)       # two different morphisms X → Z
 
     @testset "diagrams" begin
-        @test D(J[:X]) === A && D(J[:Y]) === B
-        @test D(generator(J, :f)) === f
-        @test D(id(J[:X])) == id(A)
-        @test D == parallelPair(f, g)
-        @test_throws NotInCategory diagram(J, FinSet; X=A, Y=B, f=f)
-        @test_throws ArgumentError diagram(J, FinSet; X=A, Y=B, f=f, g=g, h=f)
-        @test_throws NotInCategory diagram(J, FinSet; X=A, Y=FinCard[2], f=f, g=g)
-        @test_throws NotInCategory diagram(J, FinSet; X=B, Y=B, f=f, g=g)
-        @test object(discrete(A, B)).objects == (X1 = A, X2 = B)
-        @test object(discrete(; P=A, Q=B)).objects == (P = A, Q = B)
-        @test_throws ArgumentError discrete(A; P=B)
-        @test object(cospan(f, id(B))).objects == (A = A, B = B, C = B)
-        @test object(span(f, g)).objects == (C = A, A = B, B = B)
+        @test D(J[1]) === X && D(J[2]) === Z
+        @test D(generator(J, 1)) === r
+        @test D(id(J[1])) == id(X)
+        @test D == parallelPair(r, qp)
+        @test objects(D) == (X, Z) && arrows(D) == (r, qp)
+        @test_throws NotInCategory diagram(J, C, (X, Z), (r,))
+        @test_throws NotInCategory diagram(J, C, (X, Z, Y), (r, qp))
+        @test_throws NotInCategory diagram(J, C, (X, FinCard[2]), (r, qp))
+        @test_throws NotInCategory diagram(J, C, (Y, Z), (r, qp))
+        @test objects(discrete(X, Y)) == (X, Y)
+        @test_throws ArgumentError discrete()
+        @test objects(cospan(q, r)) == (Y, X, Z)
+        @test objects(span(p, r)) == (X, Y, Z)
     end
 
-    K = FunctorCat(J, FinSet)
-    DK = K[D]
-    Δ = diagonal(J, FinSet)
+    K = FunctorCat(J, C)
+    Δ = diagonal(J, C)
 
     @testset "functor category" begin
-        @test_throws NotInCategory K[A]
-        @test Δ(A) == Δ(A)
-        @test object(Δ(A))(J[:Y]) === A
-        @test category(Δ(f)) isa Hom
-        @test category(id(DK)) isa Hom
+        @test_throws NotInCategory K[X]
+        @test Δ(X) == Δ(X)
+        @test object(Δ(X))(J[2]) === X
+        @test category(Δ(p)) isa Hom
 
-        η = Hom(DK, Δ(B))[(X = Hom(A, B)[x -> b[1]], Y = Hom(B, B)[y -> b[1]])]
-        @test η isa OIC
-        @test_throws NotInCategory Hom(DK, Δ(B))[(X = f, Y = id(B))]
-        @test_throws NotInCategory Hom(DK, Δ(B))[(X = f,)]
-        @test_throws NotInCategory Hom(DK, Δ(B))[(X = id(A), Y = id(B))]
-        c = Hom(A, A)[x -> a[1]]
-        @test category(compose(Δ(id(B)), η)) isa Hom
-        @test firstDifference(Δ(id(A)), Δ(id(A))) === nothing
-        @test firstDifference(Δ(c), Δ(id(A))).path == (:X, a[2])
+        # r and q ∘ p differ, so no transformation from D to Δ(Z) with the
+        # identity at 2 is natural, but one from parallelPair(r, r) is
+        D′ = parallelPair(r, r)
+        η = Hom(K[D′], Δ(Z))[(r, id(Z))]
+        @test components(η) == (r, id(Z))
+        @test_throws NotInCategory Hom(K[D], Δ(Z))[(r, id(Z))]
+        @test_throws NotInCategory Hom(K[D′], Δ(Z))[(r,)]
+        @test_throws NotInCategory Hom(K[D′], Δ(Z))[(p, id(Z))]
+
+        @test isIso(id(K[D])) && !isIso(η)
+        @test category(compose(Δ(id(Z)), η)) isa Hom
+        @test firstDifference(Δ(r), Δ(r)) === nothing
+        @test firstDifference(Δ(r), Δ(qp)).path == (1,)
+    end
+
+    @testset "functor categories of any categories" begin
+        # a functor out of a FreeCat is turned into a diagram to be checked
+        L = FunctorCat(C, C)
+        I = L[id(Cat[C])]
+        @test_throws NotInCategory L[D]                       # not from C
+        @test objects(diagram(id(Cat[C]))) == (X, Y, Z)
+        @test arrows(diagram(id(Cat[C]))) == (p, q, r)
+        @test components(id(I)) == (id(X), id(Y), id(Z))
+        @test_throws NotInCategory Hom(I, I)[(id(X), id(Y))]
+        @test_throws NotInCategory Hom(I, I)[(id(X), id(Y), id(Y))]
+
+        # out of any other category, a functor which is not a diagram cannot
+        # be checked, so natural transformations are trusted with `force`
+        W = WalkingArrow()
+        F = Hom(Cat[W], Cat[C])[Opaque(), force=true]
+        M = FunctorCat(W, C)
+        @test_throws InterfaceViolation diagram(F)
+        @test_throws InterfaceViolation id(M[F])
+        @test_throws NotInCategory Hom(M[F], M[F])[(id(X), id(Y))]
+        η = Hom(M[F], M[F])[(id(X), id(Y)), force=true]
+        @test components(η) == (id(X), id(Y))
+        @test agrees(compose(η, η), η)
+    end
+
+    @testset "limits are only computed where defined" begin
+        @test_throws InterfaceViolation limit(D)
+        @test_throws InterfaceViolation colimit(D)
+        @test_throws InterfaceViolation terminal(C)
     end
 
     @testset "shapes other than FreeCat" begin
         W = WalkingArrow()
-        X, Y = FinSet[1:3], FinSet[[:a, :b]]
-        y = ascat(Y)
-        h = Hom(X, Y)[t -> y[:a]]
-        D = diagram(W; A = X, B = Y, f = h)
-        @test shape(D) == W && D(:A) === X && D(:f) === h && D(W[:B]) === Y
-        @test_throws NotInCategory diagram(W; A = X, B = Y, f = id(X))
-
-        # a limit of an arrow is its domain, and a colimit its codomain
-        @test cardinality(apex(limit(D))) == cardinality(X)
-        @test cardinality(apex(colimit(D))) == cardinality(Y)
-        L, cone = limit(D), Cone(D)[(A = id(X), B = h)]
-        @test Hom(cone, L)[apexMorphism(canonicalHom(cone, L))] isa OIC
-
-        K = FunctorCat(W, FinSet)
-        Δ = diagonal(W, FinSet)
-        @test object(Δ(X))(:f) == id(X)
-        @test_throws NotInCategory Hom(K[D], Δ(Y))[(A = h, B = Hom(Y, Y)[t -> y[:b]])]
-
-        # a category which does not list its objects is not a shape
-        @test_throws InterfaceViolation diagram(FinCard; A = X)
+        E = diagram(W, (X, Y), (p,))
+        @test shape(E) == W && objects(E) == (X, Y) && arrows(E) == (p,) && E(W[2]) === Y
+        @test_throws NotInCategory diagram(W, (X, Y), (q,))
+        cone = Cone(E)[id(X), p]
+        @test apex(cone) === X && leg(cone, 2) === p
+        @test arrows(object(diagonal(W, C)(X))) == (id(X),)
+        @test_throws InterfaceViolation diagram(FinCard, (X,))
     end
 end

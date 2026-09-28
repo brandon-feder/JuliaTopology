@@ -9,23 +9,21 @@ the same category, `Hom(D, C)` is itself a [`Category`](@ref), and a morphism
 from `D` to `C` is any object of it:
 
 ```julia
-D, C = FinSet[[1, 2]], FinSet[[:a, :b]]
+J = FreeCat(2, (1 => 2,))
+D, C = J[1], J[2]
 H = Hom(D, C)
-a, b = ascat(D), ascat(C)
-f = H[[a[1] => b[:a], a[2] => b[:b]]]   # f :: OIC{_, Hom{...}}
+f = H[(1,)]                               # f :: OIC{_, Hom{...}}
 ```
 
 Whether a morphism is an epimorphism, monomorphism or isomorphism is a
 property of it, not a category it is in: [`isEpi`](@ref), [`isMono`](@ref)
-and [`isIso`](@ref), which each implementation of morphisms defines (for
-finite sets, surjective, injective and bijective).
+and [`isIso`](@ref), which each implementation of morphisms defines.
 
 ## Required Interface
 
 None of its own — `Hom(D, C)` is always a valid category once `D` and `C` are
 objects of the same category. What is required to actually have objects *in*
-it is the underlying category's own interface for morphisms (see
-[Morphisms of FinSet](@ref)).
+it is the underlying category's own interface for morphisms.
 
 ## Standardized Interface
 
@@ -39,8 +37,7 @@ it is the underlying category's own interface for morphisms (see
   throws an `InterfaceViolation` naming the method to define
 - `isEpi(f)`, `isMono(f)`, `isIso(f)`, `inv(f; force=false)` — likewise
 - `f == g`, `hash(f)` on `H` itself — default identity; not overloaded here
-  (see [The category FinSet](@ref) for a discussion of why equality is left
-  as plain identity rather than made extensional)
+  (use `agrees(f, g)` to compare what morphisms do)
 
 ## Interface Specification Assumptions
 

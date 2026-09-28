@@ -233,17 +233,29 @@ function checkInCategory(
 
     # `G(β) ∘ h == h′ ∘ F(α)`
     difference = firstDifference(lhs, rhs)
+
+    # the difference is at an element, reached through the components named by
+    # the rest of its path, or else between whole morphisms
     if difference !== nothing
+        atElement = !isempty(difference.path) && last(difference.path) isa OIC
+        within = atElement ? difference.path[1:end-1] : difference.path
+        whereText = isempty(within) ? "" :
+            @annotated(" at the component $(join(valclr.(within), " of "))")
         throw(NotInCategory(morph, H,
-            @annotated """
+            atElement ?
+            @annotated("""
             The morphism $(objclr(name(OIC(morph, H; force=true)))) is not \
             in $H, since it does not commute: the element \
-            $(objclr(name(last(difference.path))))$(length(difference.path) > 1 ?
-                @annotated(" of $(join(valclr.(difference.path[1:end-1]), " of "))") :
-                "") is sent to \
+            $(objclr(name(last(difference.path))))$whereText is sent to \
             $(objclr(name(difference.left))) by $(codeclr("G(β) ∘ h")) but \
             to $(objclr(name(difference.right))) by $(codeclr("h′ ∘ F(α)")).
-            """
+            """) :
+            @annotated("""
+            The morphism $(objclr(name(OIC(morph, H; force=true)))) is not \
+            in $H, since it does not commute$whereText: \
+            $(codeclr("G(β) ∘ h")) is $(objclr(name(difference.left))) but \
+            $(codeclr("h′ ∘ F(α)")) is $(objclr(name(difference.right))).
+            """)
         ))
     end
 

@@ -14,7 +14,7 @@ Given functors `F: A → C` and `G: B → C`, i.e. objects of
   in `A` and `β: b → b′` in `B` with `G(β) ∘ h == h′ ∘ F(α)`.
 
 Its building blocks are the terminal category [`Point`](@ref) (the free
-category with one object, `Point[:pt]`), the identity functor `id(Cat[C])`,
+category with one object, `Point[1]`), the identity functor `id(Cat[C])`,
 and the functor [`constant`](@ref)`(X)` from `Point` picking out an object `X`.
 
 ## Slices and coslices
@@ -32,7 +32,7 @@ Slices and coslices are cones and cocones over the one-object diagram
 None of its own. Membership checks that each component lies in the right
 category and, for morphisms, that the square commutes, which is checked
 using `compose` and [`firstDifference`](@ref) in `C`, e.g. pointwise when `C`
-is FinSet (otherwise, pass `force=true`).
+can compare its morphisms (otherwise, pass `force=true`).
 
 ## Standardized Interface
 
@@ -54,8 +54,8 @@ is FinSet (otherwise, pass `force=true`).
 ## Basic Example
 
 ```julia
-X, A = FinSet[1:2], FinSet[1:4]
-x = ascat(X)
-f = Slice(X)[Hom(A, X)[t -> mod1(t, 2), values=true]]
-canonicalHom(f, terminal(Slice(X)))   # the unique morphism into the terminal object
+C = FreeCat(3, (1 => 2, 2 => 3))
+p, q = generator(C, 1), generator(C, 2)
+S = Slice(C[3])
+Hom(S[q ∘ p], S[q])[p]   # the triangle q ∘ p == q ∘ p commutes
 ```

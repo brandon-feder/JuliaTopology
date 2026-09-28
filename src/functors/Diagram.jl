@@ -6,17 +6,18 @@
     FuncDiagram(objects, arrows)
 
 A diagram of shape `J` in a category `C`, i.e. a functor from `J` to
-`C`, an object of `Hom(Cat[J], Cat[C])`: `NamedTuple`s assigning an object of
-`C` to each vertex and a morphism of `C` to each arrow of `J`. Build one with
-[`diagram`](@ref), or [`parallelPair`](@ref), [`cospan`](@ref),
-[`span`](@ref) or [`discrete`](@ref). The shape `J` may be any category
-defining [`vertices`](@ref) and [`generators`](@ref), such as a
-[`FreeCat`](@ref). Applied to a vertex `J[:X]` it gives the
-object at `X`, and applied to a path, the composite of the arrows along it.
+`C`, an object of `Hom(Cat[J], Cat[C])`: a tuple of objects of `C`, one for
+each vertex `1:nvertices(J)`, and a tuple of morphisms of `C`, one for each
+arrow of [`generators`](@ref)`(J)`. Build one with [`diagram`](@ref), or
+[`parallelPair`](@ref), [`cospan`](@ref), [`span`](@ref) or
+[`discrete`](@ref). The shape `J` may be any category defining
+[`nvertices`](@ref) and [`generators`](@ref), such as a [`FreeCat`](@ref).
+Applied to a vertex `J[i]` it gives the object at `i`, and applied to a path,
+the composite of the arrows along it.
 """
 struct FuncDiagram
-    objects::NamedTuple
-    arrows::NamedTuple
+    objects::Tuple
+    arrows::Tuple
 end
 
 """
@@ -26,26 +27,41 @@ The shape of a diagram `D`, the category it is a functor from.
 """
 shape(D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}}) = object(domain(category(D)))
 
+"""
+    objects(D)
+
+The objects of a diagram `D`, a tuple with the object at each vertex.
+"""
+objects(D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}}) = object(D).objects
+
+"""
+    arrows(D)
+
+The morphisms of a diagram `D`, a tuple with the morphism at each generating
+arrow of its shape.
+"""
+arrows(D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}}) = object(D).arrows
+
 function checkInCategory(D::FuncDiagram, H::Hom{<:Any, <:Any, CatCat})
     J, C = object(domain(H)), object(codomain(H))
 
     # one object for each vertex
-    if Set(keys(D.objects)) != Set(vertices(J))
+    if length(D.objects) != nvertices(J)
         throw(NotInCategory(D, H,
             @annotated """
-            A diagram of shape $J must have one object for each of the \
-            vertices $(valclr(vertices(J))), but it has objects for \
-            $(valclr(keys(D.objects))).
+            A diagram of shape $J must have one object for each of its \
+            $(valclr(nvertices(J))) vertices, but it has \
+            $(valclr(length(D.objects))).
             """
         ))
     end
 
     # of `C`
-    for (v, X) in pairs(D.objects)
+    for (i, X) in enumerate(D.objects)
         if !(X isa OIC && category(X) == C)
             throw(NotInCategory(D, H,
                 @annotated """
-                The object at $(valclr(v))
+                The object at the vertex $(valclr(i))
                 $TAB$(X isa OIC ? X : valclr(X))
                 is not an object of $C, so it cannot be part of a diagram in \
                 $C.
@@ -55,29 +71,29 @@ function checkInCategory(D::FuncDiagram, H::Hom{<:Any, <:Any, CatCat})
     end
 
     # one morphism for each arrow
-    if Set(keys(D.arrows)) != Set(keys(generators(J)))
+    if length(D.arrows) != length(generators(J))
         throw(NotInCategory(D, H,
             @annotated """
-            A diagram of shape $J must have one morphism for each of the \
-            arrows $(valclr(keys(generators(J)))), but it has morphisms for \
-            $(valclr(keys(D.arrows))).
+            A diagram of shape $J must have one morphism for each of its \
+            $(valclr(length(generators(J)))) arrows, but it has \
+            $(valclr(length(D.arrows))).
             """
         ))
     end
 
     # of `C`, between the objects at its ends
-    for (label, (s, t)) in pairs(generators(J))
-        m = D.arrows[label]
+    for (k, (s, t)) in enumerate(generators(J))
+        m = D.arrows[k]
         if !(m isa OIC && category(m) isa Hom &&
                 domain(category(m)) == D.objects[s] &&
                 codomain(category(m)) == D.objects[t])
             throw(NotInCategory(D, H,
                 @annotated """
-                The morphism at the arrow $(valclr(label)): \
-                $(valclr(s)) → $(valclr(t))
+                The morphism at the arrow $(valclr(k)), from the vertex \
+                $(valclr(s)) to the vertex $(valclr(t)),
                 $TAB$(m isa OIC ? m : valclr(m))
                 is not a morphism from $(D.objects[s]) to $(D.objects[t]), \
-                the objects at $(valclr(s)) and $(valclr(t)).
+                the objects at those vertices.
                 """
             ))
         end
@@ -87,37 +103,24 @@ function checkInCategory(D::FuncDiagram, H::Hom{<:Any, <:Any, CatCat})
 end
 
 
-function (D::OIC{FuncDiagram, <:Hom{JT, <:Any, CatCat}})(v::OIC{Symbol, JT}) where JT
-    return object(D).objects[object(v)]
-end
-
-# by label: the object at a vertex, or the morphism at an arrow
-function (D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}})(label::Symbol)
-    haskey(object(D).objects, label) && return object(D).objects[label]
-    haskey(object(D).arrows, label) && return object(D).arrows[label]
-    throw(ArgumentError(
-        @annotated """
-        $(valclr(label)) is neither a vertex nor an arrow of $(shape(D)).
-        """
-    ))
+function (D::OIC{FuncDiagram, <:Hom{JT, <:Any, CatCat}})(v::OIC{Int, JT}) where JT
+    return objects(D)[object(v)]
 end
 
 function (D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}})(
-    p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}
+    p::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}
 )
     path = object(p).path
     isempty(path) && return id(D(domain(category(p))))
-    morph = object(D).arrows[first(path)]
-    for label in path[2:end]
-        morph = compose(object(D).arrows[label], morph)
+    morph = arrows(D)[first(path)]
+    for k in path[2:end]
+        morph = compose(arrows(D)[k], morph)
     end
     return morph
 end
 
-function name(D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}})
-    objects = join(("$v: $(shortName(X))" for (v, X) in pairs(object(D).objects)), ", ")
-    return "Diagram($objects)"
-end
+name(D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}}) =
+    "Diagram($(join(map(shortName, objects(D)), ", ")))"
 
 """
     op(D)
@@ -127,51 +130,81 @@ The opposite `Dᵒᵖ: Jᵒᵖ → Cᵒᵖ` of a diagram `D: J → C`, sending e
 """
 function op(D::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}})
     J, C = shape(D), object(codomain(category(D)))
-    return diagram(op(J), op(C); force=true,
-        (v => op(X) for (v, X) in pairs(object(D).objects))...,
-        (a => op(f) for (a, f) in pairs(object(D).arrows))...)
+    return diagram(op(J), op(C), map(op, objects(D)), map(op, arrows(D)); force=true)
 end
 
 """
-    diagram(J::Category, C::Category; objects_and_arrows...)
-    diagram(J::Category; objects_and_arrows...)
+    diagram(J::Category, C::Category, objects = (), arrows = ())
+    diagram(J::Category, objects, arrows = ())
 
-The diagram of shape `J` in `C` given by keyword arguments naming each vertex
-and arrow of `J`, e.g. `diagram(parallelPairShape(); X = A, Y = B, f = f,
-g = g)`. Without `C`, the category is that of the objects. Checks that it is a
-diagram unless `force=true`.
+The diagram of shape `J` in `C` with the object `objects[i]` at each vertex `i`
+and the morphism `arrows[k]` at each generating arrow `k` of `J`, e.g.
+`diagram(parallelPairShape(), (A, B), (f, g))`. Without `C`, the category is
+that of the objects. Checks that it is a diagram unless `force=true`.
 """
-function diagram(J::Category; force::Bool=false, kwargs...)
-    given = findfirst(v -> haskey(kwargs, v), vertices(J))
-
+function diagram(J::Category, Xs::Tuple, ms::Tuple=(); force::Bool=false)
     # an object to read the category off
-    if given === nothing
+    if isempty(Xs)
         throw(ArgumentError(
             @annotated """
-            No object is given for any vertex of $J, so there is none to \
-            read the diagram's category off; give it explicitly, as \
-            $(codeclr("diagram(J, C; …)")).
+            No object is given, so there is none to read the diagram's \
+            category off; give it explicitly, as \
+            $(codeclr("diagram(J, C, objects, arrows)")).
             """
         ))
     end
-    return diagram(J, category(kwargs[vertices(J)[given]]); force, kwargs...)
+    return diagram(J, category(first(Xs)), Xs, ms; force)
 end
 
-function diagram(J::Category, C::Category; force::Bool=false, kwargs...)
-    # every keyword names a vertex or an arrow
-    for key in keys(kwargs)
-        if !(key in vertices(J) || haskey(generators(J), key))
-            throw(ArgumentError(
-                @annotated """
-                $(valclr(key)) is neither a vertex nor an arrow of $J.
-                """
-            ))
-        end
-    end
-    objects = (; (v => kwargs[v] for v in vertices(J) if haskey(kwargs, v))...)
-    arrows = (; (a => kwargs[a] for a in keys(generators(J)) if haskey(kwargs, a))...)
-    return Hom(Cat[J], Cat[C])[FuncDiagram(objects, arrows), force=force]
+function diagram(J::Category, C::Category, Xs::Tuple=(), ms::Tuple=(); force::Bool=false)
+    return Hom(Cat[J], Cat[C])[FuncDiagram(Xs, ms), force=force]
 end
+
+"""
+    diagram(F)
+
+The diagram of a functor `F` out of a shape `J`: its object at each vertex and
+its morphism at each generating arrow of `J`. A diagram is its own diagram; for
+a functor out of a [`FreeCat`](@ref) it is `F` applied to each vertex `J[i]`
+and each `generator(J, k)`. Other functors may define it, which lets natural
+transformations between them be checked.
+"""
+diagram(F::OIC{FuncDiagram, <:Hom{<:Any, <:Any, CatCat}}) = F
+diagram(F::OIC{FuncDiagram, <:Hom{FreeCat, <:Any, CatCat}}) = F
+
+function diagram(F::OIC{<:Any, <:Hom{FreeCat, <:Any, CatCat}})
+    J, C = object(domain(category(F))), object(codomain(category(F)))
+    return diagram(J, C, map(i -> F(J[i]), Tuple(vertices(J))),
+        map(k -> F(generator(J, k)), Tuple(eachindex(generators(J)))))
+end
+
+function diagram(F::OIC{<:Any, <:Hom{<:Any, <:Any, CatCat}})
+    J = object(domain(category(F)))
+    throw(InterfaceViolation(
+        @annotated """
+        The functor
+        $TAB$F
+        is not a diagram, and functors of type \
+        $(dtclr(typeString(typeof(object(F))))) out of $J cannot be turned \
+        into one, since there is no way to list their objects and morphisms \
+        at the vertices and generating arrows of $J. When appropriate, you \
+        may define this by overloading
+        $(overloadHint("diagram", ("F", @annotated("any functor out of $J \
+            represented by values of type \
+            $(dtclr(typeString(typeof(object(F)))))"),
+            "OIC{$(typeString(typeof(object(F)))), <:Hom{\
+            $(typeString(typeof(J))), <:Any, CatCat}}")))
+        to return a diagram, e.g. built by \
+        $(codeclr("diagram(J, C, objects, arrows)")).
+        """
+    ))
+end
+
+# the fallback only throws, so it does not count as turning a functor into a
+# diagram, e.g. for checking natural transformations
+append!(FALLBACK_SIGNATURES, [
+    which(Tuple{typeof(diagram), OIC{Nothing, Hom{Nothing, Nothing, CatCat}}}).sig,
+])
 
 """
     constant(X)
@@ -179,77 +212,63 @@ end
 The functor from [`Point`](@ref) to the category of `X` sending its one object
 to `X`, i.e. the diagram of shape `Point` at `X`.
 """
-constant(X::OIC) = diagram(Point, category(X); pt = X)
+constant(X::OIC) = diagram(Point, category(X), (X,))
 
 """
     toPoint(J)
 
 The unique functor from a shape `J` to [`Point`](@ref), sending every vertex
-to `Point[:pt]` and every arrow to its identity. The constant diagram of shape
+to `Point[1]` and every arrow to its identity. The constant diagram of shape
 `J` at `X` is `constant(X) ∘ toPoint(J)`.
 """
 function toPoint(J::Category)
-    return diagram(J, Point; force=true, (v => Point[:pt] for v in vertices(J))...,
-        (a => id(Point[:pt]) for a in keys(generators(J)))...)
+    return diagram(J, Point, ntuple(_ -> Point[1], nvertices(J)),
+        map(_ -> id(Point[1]), generators(J)); force=true)
 end
 
 """
     parallelPair(f, g)
 
 The diagram `f, g: X ⇉ Y` of two morphisms with the same domain and codomain,
-of shape [`parallelPairShape`](@ref).
+of shape [`parallelPairShape`](@ref), with `X` at vertex 1 and `Y` at 2.
 """
 function parallelPair(f::OIC{<:Any, <:Hom}, g::OIC{<:Any, <:Hom})
     X, Y = domain(category(f)), codomain(category(f))
-    return diagram(parallelPairShape(), category(X); X, Y, f, g)
+    return diagram(parallelPairShape(), (X, Y), (f, g))
 end
 
 """
     cospan(f, g)
 
 The diagram `f: A → C ← B: g` of two morphisms with the same codomain, of
-shape [`cospanShape`](@ref).
+shape [`cospanShape`](@ref), with `A`, `B`, `C` at vertices 1, 2, 3.
 """
 function cospan(f::OIC{<:Any, <:Hom}, g::OIC{<:Any, <:Hom})
     A, B, C = domain(category(f)), domain(category(g)), codomain(category(f))
-    return diagram(cospanShape(), category(A); A, B, C, f, g)
+    return diagram(cospanShape(), (A, B, C), (f, g))
 end
 
 """
     span(f, g)
 
 The diagram `A ← C → B` of two morphisms `f: C → A` and `g: C → B` with the
-same domain, of shape [`spanShape`](@ref).
+same domain, of shape [`spanShape`](@ref), with `C`, `A`, `B` at vertices 1,
+2, 3.
 """
 function span(f::OIC{<:Any, <:Hom}, g::OIC{<:Any, <:Hom})
     C, A, B = domain(category(f)), codomain(category(f)), codomain(category(g))
-    return diagram(spanShape(), category(C); C, A, B, f, g)
+    return diagram(spanShape(), (C, A, B), (f, g))
 end
 
 """
     discrete(X₁, X₂, …)
-    discrete(; A = X₁, B = X₂, …)
 
-The diagram of the objects `X₁, X₂, …` of one category, with no arrows. Given
-positionally, its vertices are `:X1, :X2, …`; given by keyword, they are the
-keywords.
+The diagram of the objects `X₁, X₂, …` of one category, with no arrows, of
+shape [`discreteShape`](@ref)`(n)`, with `Xᵢ` at vertex `i`.
 """
-function discrete(objects::OIC...; kwargs...)
-    # objects are given one way
-    if !isempty(objects) && !isempty(kwargs)
-        throw(ArgumentError(
-            @annotated """
-            The objects of a discrete diagram must be given either \
-            positionally or by keyword, not both.
-            """
-        ))
-    end
-    labeled = isempty(kwargs) ?
-        (; (Symbol("X$i") => X for (i, X) in enumerate(objects))...) :
-        (; kwargs...)
-
+function discrete(Xs::OIC...)
     # at least one, to know the category
-    if isempty(labeled)
+    if isempty(Xs)
         throw(ArgumentError(
             @annotated """
             A discrete diagram needs at least one object to know its \
@@ -258,8 +277,7 @@ function discrete(objects::OIC...; kwargs...)
             """
         ))
     end
-    J = discreteShape(keys(labeled)...)
-    return diagram(J, category(first(labeled)); labeled...)
+    return diagram(discreteShape(length(Xs)), Xs)
 end
 
 # =========================================================
@@ -316,7 +334,7 @@ function (Δ::OIC{FuncDiagonal, <:Hom{CatT, <:FunctorCat, CatCat}})(
 ) where CatT
     J = object(Δ).shape
     return Hom(Δ(domain(category(u))), Δ(codomain(category(u))))[
-        (; (v => u for v in vertices(J))...), force=true
+        ntuple(_ -> u, nvertices(J)), force=true
     ]
 end
 

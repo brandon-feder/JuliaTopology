@@ -58,7 +58,7 @@ implement fixes, even to minor issues.
     error or warning.
 15. All documentation — docstrings and files under `docs/src/` alike — should
     stay terse and minimal, matching the style already in the repository
-    (see e.g. `CatFinSet`'s docstring or `manual/finset.md`): short
+    (see e.g. `Comma`'s docstring or `manual/comma.md`): short
     declarative bullets over prose, one small example rather than several,
     no restating what a signature already says. Flag any documentation that
     is verbose, redundant with a docstring already covering the same ground,

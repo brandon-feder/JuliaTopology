@@ -3,9 +3,8 @@
 ## Naming Conventions
 
 * A category is a `PascalCase` `struct` subtyping `Category`, named
-    `CatSomething` (e.g. `CatFinSet`, `CatFinCard`). Its global instance is
-    exported under the un-prefixed, lowercase-first name (`FinSet`,
-    `FinCard`).
+    `CatSomething` (e.g. `CatFinCard`, `CatCat`). Its global instance is
+    exported under the un-prefixed name (`FinCard`, `Cat`).
 * Categories built from other things keep a short name without the `Cat`
     prefix, since they are parameterized rather than standing alone: `Hom`,
     `FreeCat`, `FunctorCat`, `Comma`, `Cone`, `Cocone`.
@@ -13,14 +12,14 @@
     property checked by `isEpi`/`isMono`/`isIso`, never a separate category.
 * The type representing objects of a category is named `Generic<Category>`
     (e.g. `GenericComma`), its morphisms `GenericMorph<Category>` (e.g.
-    `GenericMorphFinSet`, `GenericMorphComma`), and a functor `Func<Name>`
+    `GenericMorphComma`, `GenericMorphFreeCat`), and a functor `Func<Name>`
     (e.g. `FuncDiagram`, `FuncDiagonal`).
 * Type parameters holding a plain, unwrapped type are named for what they
     hold (`ObjT`, `DomT`, `CodT`, or plain `T`), not a fixed placeholder name
     like `Carrier`. There is no `Carrier` concept in this design — there is
     only ever one wrapper, `ObjectInCategory`.
 * An implementation of a category's required interface (e.g.
-    `GenericMorphFinSet`) is prefixed `Generic` only when it is the
+    `GenericMorphComma`) is prefixed `Generic` only when it is the
     reference/default implementation and others are expected; a category with
     exactly one sensible representation does not need the prefix.
 
@@ -36,7 +35,7 @@
     The two sections common to nearly every category file are
     `REQUIRED INTERFACE` and `STANDARDIZED INTERFACE`, in that order,
     followed by `PRINTING`. A file of constructions rather than a category
-    (e.g. `LimitsFinSet.jl`) is divided by topic instead.
+    (e.g. `Limits.jl`) is divided by topic instead.
 * `name` and `treeNode` methods for a category live in its own file, since
     `Printing.jl` is loaded before the categories; `Printing.jl` only covers
     `ObjectInCategory`, `OICAsCat` and `Hom`.
@@ -49,13 +48,13 @@
 
 * A category's docstring is split into up to three sections, in this order:
     - `# Required Interface` — one bullet per required function, with its
-        declared signature (e.g. `` `cardinality(::OIC{T, CatFinSet})::Int` ``).
+        declared signature (e.g. `` `cardinality(::OIC{T, CatFinCard})::Int` ``).
     - `# Standardized Interface` — same format, for functions built
         generically on top of the required interface.
     - `# Interface Specification Assumptions` — the shorthand used throughout
-        the rest of the docstring (e.g. `` `X, Y :: FinSet` ``), so bullets
+        the rest of the docstring (e.g. `` `X, Y :: FinCard` ``), so bullets
         don't need to re-explain it.
-    See `CatFinSet` or `GenericMorphFinSet` for the canonical shape.
+    See `Comma` or `FunctorCat` for the canonical shape.
 * The set of functions listed under a category's `# Required Interface` must
     be exactly the set asserted by that category's `checkInterface` —
     neither documenting an obligation that isn't checked, nor checking one
@@ -101,11 +100,10 @@
 * Object isomorphism should *never* be expressed by overloading `Base.:(==)`.
     Use `areIsomorphic(x, y)::Bool` (and `≅`) instead, and only overload it for
     a category when isomorphism is actually decidable (and worth deciding) —
-    e.g. `CatFinSet`/`CatFinCard` decide it from `cardinality` alone.
+    e.g. `CatFinCard` decides it from `cardinality` alone.
 * Plain `==`/`hash`, where overloaded at all, should stay strict identity
     unless a category has a specific, well-understood reason to make it
-    extensional (see the "Equality" note in [The category FinSet](@ref)
-    for why `FinSet` itself does not).
+    extensional; compare what morphisms do with `agrees` instead.
 
 ## Membership
 

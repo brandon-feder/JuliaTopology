@@ -15,7 +15,7 @@ a cone in an opposite category: `Cocone(D) == Op(Cone(op(D)))`.
 - `op(C)`, `op(X)`, `op(f)` — the opposite of a category, object or morphism
 - `compose`, `id`, `firstDifference`, `isEpi`, `isMono`, `isIso`, `inv`,
   `canonicalHom`, `terminal`, `initial` — by duality from `C`
-- `vertices`, `generators` — for a shape `C`, those of `C` with every
+- `nvertices`, `generators` — for a shape `C`, those of `C` with every
   generator reversed
 """
 struct Op{CT <: Category} <: Category
@@ -116,7 +116,7 @@ terminal(K::Op) = op(initial(K.category))
 initial(K::Op) = op(terminal(K.category))
 
 # a shape's opposite has the same vertices, with every generator reversed
-vertices(K::Op) = vertices(K.category)
+nvertices(K::Op) = nvertices(K.category)
 generators(K::Op) = map(ends -> last(ends) => first(ends), generators(K.category))
 
 # =========================================================

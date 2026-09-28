@@ -9,15 +9,16 @@ Choices this package makes consistently, beyond the [Style guide](style.md).
 - Morphisms are objects of `Hom(X, Y)`; functors are morphisms of `Cat`,
   i.e. objects of `Hom(Cat[A], Cat[B])`; natural transformations are
   morphisms of a `FunctorCat`.
-- Elements of a finite set `X` are objects of `ascat(X)`, and are always
-  wrapped: the pairs given to `H[pairs]`, a function given to `H[f]`, and the
-  components of a limit's elements are all wrapped elements; `values=true` is
-  shorthand for writing them as plain values. `globalElement` and `element`
-  relate them to maps `1 → X`.
+- The elements of an object `X` whose category opts into it are objects of
+  `ascat(X)`, and are always wrapped when passed around.
 - Objects and morphisms are built as `C[data]` and `Hom(X, Y)[data]`, where
-  `data` is the plainest description: pairs or a function for a map of sets, a
-  path `(:f, :g)`, components `(X = η_X, …)`, a comma object `(a, b, h)` or
+  `data` is the plainest description: a path `(1, 2)`, the components
+  `(η₁, η₂, …)` of a natural transformation, a comma object `(a, b, h)` or
   morphism `(α, β)`. The `Generic…` types are for implementers.
+- A morphism stores that plain description, not the structure used to check
+  it: a natural transformation is its tuple of components, and its check
+  builds the diagram in the arrow category whose squares commuting is
+  naturality.
 - New constructions are built from existing ones where the mathematics allows:
   a slice is a cone over a one-object diagram, a cone is a comma category
   `Δ ↓ D`, `Point` is a free category, a constant functor is a diagram, a
@@ -26,10 +27,13 @@ Choices this package makes consistently, beyond the [Style guide](style.md).
 ## Shapes
 
 - Anything that works with diagrams (functor categories, the diagonal, cones,
-  limits) knows a shape only through `vertices(J)` and `generators(J)`, and
-  looks objects and morphisms up by label, `D(:X)` and `D(:f)`, never through
-  `J`'s own morphisms. Only applying a diagram to a path is specific to
-  `FreeCat`.
+  limits) knows a shape only through `nvertices(J)` and `generators(J)`, and
+  looks objects and morphisms up by position, `objects(D)[i]` and
+  `arrows(D)[k]`, never through `J`'s own morphisms. Only applying a diagram to
+  a path is specific to `FreeCat`.
+- Nothing is labeled by `Symbol`s: vertices, arrows, legs and components are
+  numbered `1:n`, and objects built from several others (a product of finite
+  cardinals, say) are numbered too.
 
 ## Duality
 
@@ -55,6 +59,11 @@ Choices this package makes consistently, beyond the [Style guide](style.md).
 - Code which builds an object it knows to be valid, e.g. a limit's legs or a
   universal morphism, passes `force=true`; tests rebuild such objects without
   it, so the checks confirm them.
+- When something cannot be checked, e.g. naturality between functors with no
+  [`diagram`](@ref), or commutativity where morphisms cannot be compared,
+  building it without `force` throws a `NotInCategory` saying so, and
+  `force=true` trusts it. Nothing is refused only because it cannot be
+  checked.
 - A property which is expensive to check is checked once, where it matters,
   not repeatedly.
 
@@ -65,7 +74,7 @@ Choices this package makes consistently, beyond the [Style guide](style.md).
   every element are not. Use `firstDifference(f, g)` to compare morphisms
   extensionally.
 - So that things built twice compare equal, prefer immutable containers
-  (`NamedTuple`, `Tuple`) to `Dict`s for the parts of a diagram, a natural
+  (`Tuple`s) to `Dict`s for the parts of a diagram, a natural
   transformation or a category.
 - `canonicalHom(A, B)` is the unique morphism from `A` to `B`, decided from the
   morphisms themselves (e.g. by checking that a cone factors in exactly one
@@ -74,12 +83,11 @@ Choices this package makes consistently, beyond the [Style guide](style.md).
 
 ## Laziness and caching
 
-- Maps are lazy: `H[f::Function]` and `compose` build a `FunctionDict`, which
-  computes each value on lookup.
-- A finite set needs a known length, so an object is only lazy when Julia's
-  iterators give it one (e.g. a product, `Iterators.product`); otherwise it is
-  computed once when built (e.g. an equalizer or a colimit) and reflects its
-  inputs as they were then.
+- Maps may be lazy, computing each value on lookup, where the category's
+  representation of morphisms allows it.
+- An object of a category of finite things needs a known size, so it is only
+  lazy when its iterator has one; otherwise it is computed once when built
+  and reflects its inputs as they were then.
 - Nothing derived from a wrapped value is cached, since the value may be
   mutated.
 

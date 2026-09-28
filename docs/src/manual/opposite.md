@@ -9,9 +9,9 @@ every morphism reversed. `op` moves objects and morphisms between `C` and
 `Op(C)`, and undoes itself:
 
 ```julia
-A, B = FinSet[1:3], FinSet[[:a, :b]]
-f = Hom(A, B)[x -> :a, values=true]
-op(f)          # a morphism of Op(FinSet) from op(B) to op(A)
+C = FreeCat(2, (1 => 2,))
+f = generator(C, 1)
+op(f)          # a morphism of Op(C) from op(C[2]) to op(C[1])
 op(op(f)) === f
 ```
 
@@ -34,8 +34,8 @@ category: `Cocone(D) == Op(Cone(op(D)))`. So cocones, coslices and colimits get
 their structure, checks and universal morphisms from those of cones. They are
 still built and read with the morphisms of `C` itself — `Cocone(D)[legs]`,
 `apex(c)`, `legs(c)`, `Hom(c₁, c₂)[u]`, `apexMorphism(m)` — which convert with
-`op` as needed. Only the computations on sets themselves, of a colimit and of
-the morphism out of it, are written separately from those of limits.
+`op` as needed. Only a category's own computations, of a colimit and of the
+morphism out of it, are written separately from those of limits.
 
 ## Interface Specification Assumptions
 

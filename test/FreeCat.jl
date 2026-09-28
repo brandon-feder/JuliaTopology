@@ -1,43 +1,43 @@
 @testset "FreeCat" begin
     @testset "construction" begin
-        @test parallelPairShape().vertices == (:X, :Y)
-        @test isempty(emptyShape().vertices)
-        @test discreteShape(:A, :B).arrows == NamedTuple()
+        @test vertices(parallelPairShape()) == 1:2
+        @test generators(parallelPairShape()) == (1 => 2, 1 => 2)
+        @test isempty(vertices(emptyShape()))
+        @test isempty(generators(discreteShape(2)))
         @test parallelPairShape() == parallelPairShape()
-        @test_throws ArgumentError FreeCat((:A,), (f = :A => :Z,))
-        @test_throws ArgumentError FreeCat((:A, :f), (f = :A => :A,))
-        @test_throws ArgumentError FreeCat((:A,), (f = :A,))
-        @test_throws ArgumentError FreeCat((:A, :A), NamedTuple())
+        @test FreeCat(2, [1 => 2]) == FreeCat(2, (1 => 2,))
+        @test_throws ArgumentError FreeCat(1, (1 => 3,))
+        @test_throws ArgumentError FreeCat(1, (1,))
+        @test_throws ArgumentError FreeCat(-1)
     end
 
-    J = FreeCat((:A, :B, :C), (f = :A => :B, g = :B => :C))
+    J = FreeCat(3, (1 => 2, 2 => 3))
 
     @testset "objects" begin
-        @test J[:A] isa OIC
-        @test_throws NotInCategory J[:Z]
-        @test_throws NotInCategory J[1]
+        @test J[1] isa OIC
+        @test_throws NotInCategory J[4]
+        @test_throws NotInCategory J[:A]
     end
 
     @testset "morphisms" begin
-        f, g = generator(J, :f), generator(J, :g)
-        @test_throws ArgumentError generator(J, :h)
-        @test object(compose(g, f)).path == (:f, :g)
+        f, g = generator(J, 1), generator(J, 2)
+        @test_throws ArgumentError generator(J, 3)
+        @test object(compose(g, f)).path == (1, 2)
         @test category(compose(g, f)) isa Hom
-        @test isIso(id(J[:A])) && !isIso(f)
+        @test isIso(id(J[1])) && !isIso(f)
         @test isMono(f) && isEpi(f)
-        @test compose(f, id(J[:A])) == f
+        @test compose(f, id(J[1])) == f
         @test_throws ArgumentError compose(f, g)
-        @test Hom(J[:A], J[:C])[GenericMorphFreeCat((:f, :g))] isa OIC
-        @test_throws NotInCategory Hom(J[:A], J[:C])[GenericMorphFreeCat((:g, :f))]
-        @test_throws NotInCategory Hom(J[:A], J[:C])[GenericMorphFreeCat((:f,))]
-        @test_throws NotInCategory Hom(J[:A], J[:C])[GenericMorphFreeCat((:h,))]
+        @test Hom(J[1], J[3])[GenericMorphFreeCat((1, 2))] isa OIC
+        @test_throws NotInCategory Hom(J[1], J[3])[GenericMorphFreeCat((2, 1))]
+        @test_throws NotInCategory Hom(J[1], J[3])[GenericMorphFreeCat((1,))]
+        @test_throws NotInCategory Hom(J[1], J[3])[GenericMorphFreeCat((3,))]
     end
 
-    @testset "firstDifference in FinSet" begin
-        A = FinSet[1:3]
-        a = ascat(A)
-        @test firstDifference(id(A), id(A)) === nothing
-        d = firstDifference(Hom(A, A)[x -> a[1]], id(A))
-        @test d.path == (a[2],) && d.left == a[1] && d.right == a[2]
+    @testset "firstDifference of paths" begin
+        @test firstDifference(q ∘ p, q ∘ p) === nothing
+        d = firstDifference(r, q ∘ p)
+        @test d.path == () && d.left === r && agrees(d.right, q ∘ p) === true
+        @test agrees(q ∘ p, compose(q, p)) && !agrees(r, q ∘ p)
     end
 end

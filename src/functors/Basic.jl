@@ -120,8 +120,7 @@ function compose(
     object(G) isa FuncIdentity && return F
     if object(F) isa FuncDiagram
         J, C = shape(F), object(codomain(category(G)))
-        return diagram(J, C; force=true, (v => G(F(v)) for v in vertices(J))...,
-            (a => G(F(a)) for a in keys(generators(J)))...)
+        return diagram(J, C, map(G, objects(F)), map(G, arrows(F)); force=true)
     end
     return Hom(domain(category(F)), codomain(category(G)))[FuncCompose(G, F), force=true]
 end

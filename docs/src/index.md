@@ -21,18 +21,15 @@ Pkg.add(url="https://github.com/brandon-feder/JuliaTopology.git")
 ```@example home
 using JuliaTopology
 
-A, B = FinSet[1:3], FinSet[[:a, :b]]
-a, b = ascat(A), ascat(B)
-f = Hom(A, B)[[a[1] => b[:a], a[2] => b[:b], a[3] => b[:a]]]
-f(a[2])
+C = FreeCat(3, (1 => 2, 2 => 3))
+p, q = generator(C, 1), generator(C, 2)
+q ∘ p
 ```
 
 ## Where to go next
 
-- **Tutorials** walk through the package with runnable examples, starting with
-  [Getting started](@ref).
 - **Manual** explains each concept: [Objects and categories](@ref),
-  morphisms, finite sets and comma categories.
+  morphisms, comma categories, limits and opposite categories.
 - **API Reference** lists every function and type.
 - **Developer Docs** cover the [Design guide](@ref), the style guide, and
   [Writing docs and examples](@ref).

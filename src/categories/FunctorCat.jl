@@ -1,18 +1,18 @@
 """
     FunctorCat(J, C)
 
-The functor category `[J, C]` for a shape `J` (a category defining
-[`vertices`](@ref) and [`generators`](@ref), e.g. a [`FreeCat`](@ref)) and a
-category `C`.
-Its objects are the diagrams of shape `J` in `C`, i.e. objects of
-`Hom(Cat[J], Cat[C])` (see [`diagram`](@ref)), written `FunctorCat(J, C)[D]`.
-Its morphisms are natural transformations, [`GenericMorphFunctorCat`](@ref)s.
+The functor category `[J, C]` for any categories `J` and `C`. Its objects are
+the functors from `J` to `C`, i.e. objects of `Hom(Cat[J], Cat[C])`, written
+`FunctorCat(J, C)[F]`. Its morphisms are natural transformations: for a shape
+`J` (a category defining [`nvertices`](@ref) and [`generators`](@ref), e.g. a
+[`FreeCat`](@ref)), [`GenericMorphFunctorCat`](@ref)s, and otherwise any type
+defined for them, trusted with `force=true`.
 
 # Standardized Interface
-- `compose(θ, η)`, `id(D)`, `firstDifference(η, θ)` — componentwise
+- `compose(θ, η)`, `id(F)`, `firstDifference(η, θ)` — componentwise
 
 # Interface Specification Assumptions
-- `D` is an object of `FunctorCat(J, C)`; `η, θ` are its morphisms
+- `F` is an object of `FunctorCat(J, C)`; `η, θ` are its morphisms
 """
 struct FunctorCat{JT <: Category, CT <: Category} <: Category
     J::JT
@@ -20,18 +20,22 @@ struct FunctorCat{JT <: Category, CT <: Category} <: Category
 end
 
 """
-    GenericMorphFunctorCat(diagram)
+    GenericMorphFunctorCat(components)
 
-A natural transformation `η: D₁ → D₂` between diagrams of shape `J` in `C`, a
-morphism of [`FunctorCat`](@ref)`(J, C)`: a diagram of shape `J` in the arrow
-category [`arrowCategory`](@ref)`(C)`, whose object at each vertex `j` is the
-component `η_j: D₁(j) → D₂(j)` and whose morphism at each arrow `a` is the
-square `(D₁(a), D₂(a))`. That this square commutes is exactly naturality.
-Build one with `Hom(D₁, D₂)[(j = η_j, …)]`; [`components`](@ref) reads the
-components back.
+A natural transformation `η: F → G` between functors out of a shape `J`, a
+morphism of [`FunctorCat`](@ref)`(J, C)`: a tuple with its component
+`η_j: F(j) → G(j)` at each vertex `j`. Build one with
+`Hom(F, G)[(η₁, η₂, …)]`; [`components`](@ref) reads the components back.
+
+Checking one needs the [`diagram`](@ref)s of `F` and `G`, which diagrams and
+functors out of a [`FreeCat`](@ref) have: the components, with the squares of
+the morphisms of `F` and `G` at each arrow, then form a diagram of shape `J` in
+the arrow category [`arrowCategory`](@ref)`(C)`, and that this is a diagram,
+i.e. that its squares commute, is exactly naturality. Between other functors,
+pass `force=true` to trust it.
 """
 struct GenericMorphFunctorCat
-    diagram::OIC
+    components::Tuple
 end
 
 """
@@ -66,48 +70,59 @@ end
 
 function checkInCategory(η::GenericMorphFunctorCat, H::Hom{<:Any, <:Any, <:FunctorCat})
     J, C = category(H).J, category(H).C
-    D₁, D₂ = object(domain(H)), object(codomain(H))
-    E = η.diagram
+    F, G = object(domain(H)), object(codomain(H))
+    A = arrowCategory(C)
 
-    # a diagram of shape `J` in the arrow category of `C`
-    if !(E isa OIC && category(E) == Hom(Cat[J], Cat[arrowCategory(C)]))
+    # one component for each vertex
+    if length(η.components) != nvertices(J)
         throw(NotInCategory(η, H,
             @annotated """
-            A natural transformation in $H is a diagram of shape $J in the \
-            arrow category of $C, but
-            $TAB$(E isa OIC ? E : valclr(E))
-            is not one.
+            A natural transformation in $H must have one component for each \
+            of its $(valclr(nvertices(J))) vertices, but it has \
+            $(valclr(length(η.components))).
             """
         ))
     end
 
-    # whose component at `j` goes from `D₁(j)` to `D₂(j)`
-    for j in vertices(J)
-        if !(source(E(j)) == D₁(j) && target(E(j)) == D₂(j))
+    # between functors whose objects and morphisms can be listed
+    for functor in (F, G)
+        if !hasNonFallbackMethod(Tuple{typeof(diagram), typeof(functor)})
             throw(NotInCategory(η, H,
                 @annotated """
-                The component at $(valclr(j))
-                $TAB$(arrow(E(j)))
-                is not a morphism from $(D₁(j)) to $(D₂(j)), so it cannot be \
-                a component of a natural transformation in $H.
+                Whether a natural transformation in $H is natural can only be \
+                checked when its functors are diagrams or can be turned into \
+                one (with $(codeclr("diagram"))), which
+                $TAB$functor
+                cannot. If you know it is natural, you may skip the check \
+                with `force=true`.
+                """
+            ))
+        end
+    end
+    D₁, D₂ = diagram(F), diagram(G)
+
+    # whose component at `j` goes from `D₁(j)` to `D₂(j)`
+    for (j, c) in enumerate(η.components)
+        X₁, X₂ = objects(D₁)[j], objects(D₂)[j]
+        if !(c isa OIC && category(c) isa Hom &&
+                domain(category(c)) == X₁ && codomain(category(c)) == X₂)
+            throw(NotInCategory(η, H,
+                @annotated """
+                The component at the vertex $(valclr(j))
+                $TAB$(c isa OIC ? c : valclr(c))
+                is not a morphism from $X₁ to $X₂, so it cannot be a \
+                component of a natural transformation in $H.
                 """
             ))
         end
     end
 
-    # and whose square at `a` is made of `D₁(a)` and `D₂(a)`
-    for label in keys(generators(J))
-        square = object(E(label))
-        if !(square.sourceMorph == D₁(label) && square.targetMorph == D₂(label))
-            throw(NotInCategory(η, H,
-                @annotated """
-                The square at the arrow $(valclr(label)) of the natural \
-                transformation is not made of the morphisms of $(D₁) and \
-                $(D₂) at $(valclr(label)).
-                """
-            ))
-        end
-    end
+    # and with the squares of `D₁` and `D₂` at each arrow, a diagram in the
+    # arrow category, whose comma category checks that the squares commute
+    corners = map((X₁, X₂, c) -> A[(X₁, X₂, c)], objects(D₁), objects(D₂), η.components)
+    squares = map((k, (s, t)) -> Hom(corners[s], corners[t])[
+        (arrows(D₁)[k], arrows(D₂)[k])], Tuple(eachindex(generators(J))), generators(J))
+    diagram(J, A, corners, squares)
 
     return true
 end
@@ -118,64 +133,26 @@ end
 # =========================================================
 
 """
-    H[components::NamedTuple, force=false]
+    H[components::Tuple, force=false]
 
 The natural transformation with the given components, one per vertex, as a
-morphism in `H = Hom(D₁, D₂)` of a [`FunctorCat`](@ref), e.g.
-`Hom(D₁, D₂)[(X = η_X, Y = η_Y)]`.
+morphism in `H = Hom(F, G)` of a [`FunctorCat`](@ref), i.e.
+`H[GenericMorphFunctorCat(components)]`, e.g. `Hom(F, G)[(η₁, η₂)]`.
 """
 function Base.getindex(
-    H::Hom{<:Any, <:Any, <:FunctorCat}, components::NamedTuple; force::Bool=false
+    H::Hom{<:Any, <:Any, <:FunctorCat}, components::Tuple; force::Bool=false
 )
-    J, C = category(H).J, category(H).C
-    D₁, D₂ = object(domain(H)), object(codomain(H))
-    A = arrowCategory(C)
-
-    # one component for each vertex
-    if !force && Set(keys(components)) != Set(vertices(J))
-        throw(NotInCategory(components, H,
-            @annotated """
-            A natural transformation in $H must have one component for each \
-            of the vertices $(valclr(vertices(J))), but it has components for \
-            $(valclr(keys(components))).
-            """
-        ))
-    end
-
-    # whose component at `j` goes from `D₁(j)` to `D₂(j)`
-    for j in vertices(J)
-        c = components[j]
-        if !force && !(c isa OIC && category(c) isa Hom &&
-                domain(category(c)) == D₁(j) && codomain(category(c)) == D₂(j))
-            throw(NotInCategory(components, H,
-                @annotated """
-                The component at $(valclr(j))
-                $TAB$(c isa OIC ? c : valclr(c))
-                is not a morphism from $(D₁(j)) to $(D₂(j)), so it cannot be \
-                a component of a natural transformation in $H.
-                """
-            ))
-        end
-    end
-
-    # each component an object of the arrow category, and each naturality
-    # square a morphism of it, which the comma category checks commutes
-    objects = (; (j => A[(D₁(j), D₂(j), components[j]), force=force]
-        for j in vertices(J))...)
-    squares = (; (a => Hom(objects[s], objects[t])[(D₁(a), D₂(a)), force=force]
-        for (a, (s, t)) in pairs(generators(J)))...)
-    E = diagram(J, A; force=force, objects..., squares...)
-    return H[GenericMorphFunctorCat(E), force=force]
+    return H[GenericMorphFunctorCat(components), force=force]
 end
 
 """
     components(η)
 
-The components of a natural transformation `η`, a `NamedTuple` with one
-morphism for each vertex of its shape.
+The components of a natural transformation `η`, a tuple with one morphism for
+each vertex of its shape.
 """
 components(η::OIC{GenericMorphFunctorCat, <:Hom{<:Any, <:Any, <:FunctorCat}}) =
-    map(arrow, object(object(η).diagram).objects)
+    object(η).components
 
 function compose(
     θ::OIC{GenericMorphFunctorCat, <:Hom{<:Any, <:Any, <:FunctorCat}},
@@ -201,9 +178,9 @@ function compose(
         map(compose, components(θ), components(η)), force=true]
 end
 
-function id(D::OIC{<:Any, <:FunctorCat})
-    J = category(D).J
-    return Hom(D, D)[(; (j => id(object(D)(j)) for j in vertices(J))...), force=true]
+# the identity at each vertex, which needs the objects of the diagram of `F`
+function id(F::OIC{<:Any, <:FunctorCat})
+    return Hom(F, F)[map(id, objects(diagram(object(F)))), force=true]
 end
 
 """
@@ -255,7 +232,7 @@ function firstDifference(
     η::OIC{GenericMorphFunctorCat, <:Hom{<:Any, <:Any, <:FunctorCat}},
     θ::OIC{GenericMorphFunctorCat, <:Hom{<:Any, <:Any, <:FunctorCat}}
 )
-    for j in vertices(category(category(η)).J)
+    for j in eachindex(components(η))
         difference = firstDifference(components(η)[j], components(θ)[j])
         if difference !== nothing
             return (path = (j, difference.path...), left = difference.left,
@@ -274,6 +251,5 @@ name(K::FunctorCat) = "[$(name(K.J)), $(name(K.C))]"
 name(D::OIC{<:Any, <:FunctorCat}) = name(object(D))
 
 function name(η::OIC{GenericMorphFunctorCat, <:Hom{<:Any, <:Any, <:FunctorCat}})
-    return "(" * join(("$j: $(shortName(c))" for (j, c) in pairs(components(η))),
-        ", ") * ")"
+    return "(" * join(map(shortName, components(η)), ", ") * ")"
 end

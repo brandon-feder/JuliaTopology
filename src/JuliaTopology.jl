@@ -14,10 +14,7 @@ include("Hom.jl")
 include("Printing.jl")
 
 include("categories/Cat.jl")
-# include("categories/Lifts.jl")
 include("categories/FinCard.jl")
-include("categories/FinSet.jl")
-include("categories/MorphFinSet.jl")
 include("categories/FreeCat.jl")
 include("categories/Op.jl")
 # include("categories/MorphFinCard.jl")
@@ -27,7 +24,7 @@ include("categories/FunctorCat.jl")
 include("functors/Diagram.jl")
 include("categories/Comma.jl")
 include("categories/Cone.jl")
-include("categories/LimitsFinSet.jl")
+include("categories/Limits.jl")
 
 
 # =========================================================
@@ -45,19 +42,19 @@ export Hom, domain, codomain, compose, id, firstDifference, agrees, isEpi, isMon
     isIso, canonicalHom, →
 
 # Categories
-export Op, op, GenericMorphOp, Cat, CatCat, FinSet, CatFinSet, FinCard, CatFinCard, Point, FreeCat,
+export Op, op, GenericMorphOp, Cat, CatCat, FinCard, CatFinCard, Point, FreeCat,
     FunctorCat, Comma, ↓, Cone, Cocone, Slice, Coslice
 
-# Finite sets
-export cardinality, areIsomorphic, ≅, GenericMorphFinSet
+# Finite cardinals
+export cardinality, areIsomorphic, ≅
 
 # Functors and diagrams
 export FuncIdentity, FuncCompose, toPoint, mapCone, FuncDiagram,
     FuncDiagonal, constant, diagram, diagonal, shape, parallelPair, cospan, span,
-    discrete
+    discrete, objects, arrows
 
 # Shapes and free categories
-export vertices, generators, GenericMorphFreeCat, generator, discreteShape, emptyShape,
+export nvertices, vertices, generators, GenericMorphFreeCat, generator, discreteShape, emptyShape,
     parallelPairShape, cospanShape, spanShape
 
 # Functor and comma categories
@@ -65,13 +62,8 @@ export GenericMorphFunctorCat, components, arrowCategory, GenericComma, GenericM
     arrow, apex, legs, leg, apexMorphism
 
 # Limits and colimits
-export limit, colimit, terminal, initial, universalArrow, pointCones,
-    CategoryOfElements, ∫, objectSet, componentMap, π₀, product, coproduct, equalizer,
-    coequalizer, pullback, pushout, globalElement, element, ×, ⊔
-
-# Hom-sets and images
-export HomSet, homSet, evaluation, curry, uncurry, FuncHomFrom, FuncHomTo,
-    homFrom, homTo, image, fiber, imageFactorization
+export limit, colimit, terminal, initial, universalArrow, ConeIn, product,
+    coproduct, equalizer, coequalizer, pullback, pushout, ×, ⊔
 
 # Misc
 export in

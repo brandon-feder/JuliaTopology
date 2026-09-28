@@ -68,7 +68,7 @@ function homArgsError(objA, objB, cats...)
             @annotated """
             The domain of a $kind must be an ObjectInCategory. However,
             $TAB$(valclr(objA))
-            is not. You may wrap it in a category first, e.g. $(codeclr("FinSet[x]")).
+            is not. You may wrap it in a category first, e.g. $(codeclr("C[x]")).
             """
         )
     elseif !(objB isa ObjectInCategory)
@@ -76,7 +76,7 @@ function homArgsError(objA, objB, cats...)
             @annotated """
             The codomain of a $kind must be an ObjectInCategory. However,
             $TAB$(valclr(objB))
-            is not. You may wrap it in a category first, e.g. $(codeclr("FinSet[x]")).
+            is not. You may wrap it in a category first, e.g. $(codeclr("C[x]")).
             """
         )
     elseif isempty(cats)
@@ -111,7 +111,7 @@ end
     isEpi(f)
 
 Whether the morphism `f` is an epimorphism. Each implementation of morphisms
-overloads it for its own, e.g. a map of finite sets is one when it is
+overloads it for its own, e.g. a map of finite cardinals is one when it is
 surjective.
 """
 function isEpi(f::OIC{<:Any, <:Hom})
@@ -137,7 +137,7 @@ end
     isMono(f)
 
 Whether the morphism `f` is a monomorphism. Each implementation of morphisms
-overloads it for its own, e.g. a map of finite sets is one when it is
+overloads it for its own, e.g. a map of finite cardinals is one when it is
 injective.
 """
 function isMono(f::OIC{<:Any, <:Hom})
@@ -163,7 +163,7 @@ end
     isIso(f)
 
 Whether the morphism `f` is an isomorphism. Each implementation of morphisms
-overloads it for its own, e.g. a map of finite sets is one when it is
+overloads it for its own, e.g. a map of finite cardinals is one when it is
 bijective.
 """
 function isIso(f::OIC{<:Any, <:Hom})
@@ -224,8 +224,9 @@ end
 Compare morphisms `f` and `g` with the same domain and codomain: `nothing` when
 they agree, and otherwise the first place they differ, as
 `(path, left, right)`: `f` gives `left` and `g` gives `right` at the element
-`last(path)`, reached through the components named by the rest of `path`
-(empty for a morphism without components). Each implementation of morphisms
+`last(path)`, reached through the components named by the rest of `path`. For
+morphisms without elements to compare at, `path` is empty and `left` and
+`right` are `f` and `g` themselves. Each implementation of morphisms
 overloads it for its own.
 """
 function firstDifference(f::OIC{<:Any, <:Hom}, g::OIC{<:Any, <:Hom})

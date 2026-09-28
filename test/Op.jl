@@ -1,54 +1,41 @@
 @testset "Op" begin
-    A, B = FinSet[1:3], FinSet[[:a, :b]]
-    a, b = ascat(A), ascat(B)
-    f = Hom(A, B)[x -> isodd(x) ? :a : :b, values=true]
-    s = Hom(A, A)[x -> mod1(x + 1, 3), values=true]
+    qp = q ∘ p
 
     @testset "objects and morphisms" begin
-        @test op(FinSet) == Op(FinSet) && op(op(FinSet)) == FinSet
-        @test category(op(A)) == Op(FinSet) && op(op(A)) === A
-        @test domain(category(op(f))) == op(B) && codomain(category(op(f))) == op(A)
-        @test op(op(f)) === f
-        @test_throws NotInCategory Hom(op(A), op(B))[GenericMorphOp(f)]  # wrong way round
+        @test op(C) == Op(C) && op(op(C)) == C
+        @test category(op(X)) == Op(C) && op(op(X)) === X
+        @test domain(category(op(p))) == op(Y) && codomain(category(op(p))) == op(X)
+        @test op(op(p)) === p
+        @test_throws NotInCategory Hom(op(X), op(Y))[GenericMorphOp(p)]  # wrong way round
     end
 
     @testset "structure by duality" begin
-        g = Hom(B, A)[y -> y == :a ? 1 : 2, values=true]
-        @test agrees(op(f) ∘ op(g), op(g ∘ f))
-        @test agrees(id(op(A)), op(id(A)))
-        @test isMono(op(f)) == isEpi(f) && isEpi(op(f)) == isMono(f)
-        @test isIso(op(s)) && agrees(inv(op(s)), op(inv(s)))
-        @test firstDifference(op(s), op(id(A))) !== nothing
-    end
-
-    @testset "terminal and initial" begin
-        @test cardinality(op(terminal(Op(FinSet)))) == 0     # the empty set
-        @test cardinality(op(initial(Op(FinSet)))) == 1      # the one-point set
-        @test canonicalHom(op(A), terminal(Op(FinSet))) isa OIC
-        @test_throws NoCanonicalHomError canonicalHom(op(A), op(B))
+        @test agrees(op(p) ∘ op(q), op(qp))
+        @test agrees(id(op(X)), op(id(X)))
+        @test isMono(op(p)) == isEpi(p) && isEpi(op(p)) == isMono(p)
+        @test isIso(op(id(X))) && !isIso(op(p))
+        @test agrees(inv(op(id(X))), op(id(X)))
+        @test firstDifference(op(r), op(qp)) !== nothing
+        @test_throws InterfaceViolation terminal(Op(C))   # the initial object of C
     end
 
     @testset "shapes and diagrams" begin
         J = cospanShape()
         @test vertices(op(J)) == vertices(J)
-        @test generators(op(J)) == (f = :C => :A, g = :C => :B)
-        h = Hom(B, B)[y -> y, values=true]
-        D = cospan(f, h)
+        @test generators(op(J)) == (3 => 1, 3 => 2)
+        D = cospan(q, r)
         @test op(op(D)) == D
-        @test op(D)(:f) == op(f)
+        @test arrows(op(D)) == (op(q), op(r))
     end
 
     @testset "cocones are opposite cones" begin
-        D = parallelPair(f, Hom(A, B)[x -> :a, values=true])
+        D = discrete(X, Y)
         @test Cocone(D) == Op(Cone(op(D))) && Cocone(D) isa Cocone
         @test diagram(Cocone(D)) == D
-        Q = colimit(D)
-        # each computation builds a new colimit, so compare what they hold
-        @test cardinality(apex(initial(Cocone(D)))) == cardinality(apex(Q))
-        @test cardinality(op(apex(limit(op(D))))) == cardinality(apex(Q))
-        X = FinSet[[:x]]
-        c = Cocone(D)[(X = Hom(A, X)[t -> :x, values=true], Y = Hom(B, X)[t -> :x, values=true])]
-        u = canonicalHom(Q, c)
-        @test Hom(Q, c)[apexMorphism(u)] isa OIC
+        c = Cocone(D)[qp, q]                         # legs into Z
+        @test apex(c) === Z && legs(c) == (qp, q) && leg(c, 1) == qp
+        @test_throws NotInCategory Cocone(D)[p, q]   # different apexes
+        m = Hom(c, c)[id(Z)]
+        @test apexMorphism(m) == id(Z)
     end
 end

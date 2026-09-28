@@ -9,11 +9,11 @@ type. There is exactly one wrapper, [`ObjectInCategory`](@ref) (aliased
 `OIC`), pairing a plain value with the [`Category`](@ref) it belongs to:
 
 ```julia
-X = ObjectInCategory([1, 2, 3], FinSet)   # or FinSet[[1, 2, 3]]
+X = ObjectInCategory(3, FinCard)   # or FinCard[3]
 ```
 
 * A category is a plain `struct` subtyping `Category`, named `CatSomething`,
-  with a lowercase global instance (`FinSet = CatFinSet()`). See
+  with a lowercase global instance (`FinCard = CatFinCard()`). See
   [Categories](@ref) below.
 * A category declares a *required interface* — the functions a type must
   implement to be one of its objects — checked by `checkInCategory`
@@ -22,18 +22,14 @@ X = ObjectInCategory([1, 2, 3], FinSet)   # or FinSet[[1, 2, 3]]
   `force=true`.
 * A category may also declare a *standardized interface*: functions built
   generically on top of the required interface, so every implementation gets
-  them for free. See [The category FinSet](@ref) for a full example of both.
+  them for free.
 * A category may opt into letting the elements of its own objects be treated
   as objects of a further category, `ascat(X)` for `X :: OIC`. This is not
-  universal — `FinSet` does it, `FinCard` doesn't, since an integer has no
-  elements of its own. See [Categories](@ref) and
-  [Finite sets as categories](@ref).
+  universal — `FinCard` doesn't, since an integer has no
+  elements of its own. See [Categories](@ref).
 * Morphisms are not a separate wrapper either. Given `D, C :: OIC` of the same
   category, `Hom(D, C)` is itself a `Category`, and a
   morphism is any object of it. See [Homs between categories](@ref).
-* A conversion between categories ("lifting") is registered as a morphism
-  *between categories themselves*, and resolved along a path of registered
-  conversions. See [Lifts between categories](@ref).
 
 See the [Design guide](@ref) for the principles behind this structure (why
 morphisms live in a Hom-category, why traits are forgetful functors, etc.).
@@ -41,18 +37,18 @@ morphisms live in a Hom-category, why traits are forgetful functors, etc.).
 ## Categories
 
 A [`Category`](@ref) is a plain, usually field-less, `struct` naming a
-category (e.g. `CatFinSet`, `CatFinCard`, `CatCat`). By convention its type is
+category (e.g. `CatFinCard`, `CatCat`). By convention its type is
 prefixed `Cat`; a global instance of it is exported without the prefix
-(`FinSet = CatFinSet()`, `FinCard = CatFinCard()`).
+(`FinCard = CatFinCard()`, `Cat = CatCat()`).
 
 An object of a category is not wrapped in a category-specific type. Instead,
 any Julia value can be *paired* with a category via
 [`ObjectInCategory`](@ref) (aliased `OIC`):
 
 ```julia
-X = ObjectInCategory([1, 2, 3], FinSet)   # or FinSet[[1, 2, 3]]
-object(X)     # [1, 2, 3]
-category(X)   # FinSet
+X = ObjectInCategory(3, FinCard)   # or FinCard[3]
+object(X)     # 3
+category(X)   # FinCard
 ```
 
 `C[x]` is sugar for `ObjectInCategory(x, C)`.
@@ -67,7 +63,7 @@ A category overloads, for its own objects:
   Defaults to always throwing, since no category-specific rule is known.
 - `checkInterface(x, C::Category)` — checks that `x`'s type implements
   whatever standardized-interface functions `C` needs (see e.g.
-  [The category FinSet](@ref)); throws an
+  [Limits and colimits](limits.md)); throws an
   [`InterfaceViolation`](@ref) if not. Defaults to requiring nothing.
 - `name(C::Category)::String` — how `C` prints. Defaults to the type name.
 
@@ -85,9 +81,9 @@ e.g. when `x` is already known to be valid.
 objects of their own category, is not part of every category's standardized
 interface — it is a mechanism a category can opt into by overloading
 `checkInCategory` for `OICAsCat{_, C}`, not a guarantee that comes for free.
-`CatFinSet` does this, since its elements are meaningfully individual objects
-(see [Finite sets as categories](@ref)); `CatFinCard` does not, since an `Int`
-has no elements of its own to speak of.
+A category of sets would do this, since the elements of a set are
+meaningfully individual objects; `CatFinCard` does not, since an `Int` has no
+elements of its own to speak of.
 
 ### Interface Specification Assumptions
 

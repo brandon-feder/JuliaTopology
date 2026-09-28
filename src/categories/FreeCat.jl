@@ -3,20 +3,21 @@
 # =========================================================
 
 """
-    vertices(J)
+    nvertices(J)
 
-The objects of a shape `J`, a category diagrams are functors from, as a tuple
-of `Symbol`s; with [`generators`](@ref), all that diagrams, functor categories
-and limits need to know of `J`. [`FreeCat`](@ref) defines both; any other
-category may be used as a shape by defining them too.
+The number of objects of a shape `J`, a category diagrams are functors from;
+its objects are the vertices `1:nvertices(J)`. With [`generators`](@ref), all
+that diagrams, functor categories and limits need to know of `J`.
+[`FreeCat`](@ref) defines both; any other category may be used as a shape by
+defining them too.
 """
-function vertices(J::Category)
+function nvertices(J::Category)
     throw(InterfaceViolation(
         @annotated """
         The category $J cannot be the shape of a diagram, since it does not \
-        list its objects. When appropriate, you may make it a shape by \
+        count its objects. When appropriate, you may make it a shape by \
         overloading
-        $(overloadHint("vertices", ("J", @annotated("the category $J"),
+        $(overloadHint("nvertices", ("J", @annotated("the category $J"),
             typeString(typeof(J)))))
         and $(codeclr("generators")).
         """
@@ -24,12 +25,19 @@ function vertices(J::Category)
 end
 
 """
+    vertices(J)
+
+The objects of a shape `J`, the integers `1:nvertices(J)`.
+"""
+vertices(J::Category) = 1:nvertices(J)
+
+"""
     generators(J)
 
-The generating arrows of a shape `J`, as a `NamedTuple` sending each label to
-`source => target`, both among [`vertices`](@ref)`(J)`. Every morphism of `J`
-should be a composite of these: a diagram gives a morphism for each of them,
-and a cone need only commute with them.
+The generating arrows of a shape `J`, a tuple of `source => target` pairs of
+[`vertices`](@ref)`(J)`; arrow `k` is `generators(J)[k]`. Every morphism of
+`J` should be a composite of these: a diagram gives a morphism for each of
+them, and a cone need only commute with them.
 """
 function generators(J::Category)
     throw(InterfaceViolation(
@@ -39,26 +47,26 @@ function generators(J::Category)
         by overloading
         $(overloadHint("generators", ("J", @annotated("the category $J"),
             typeString(typeof(J)))))
-        and $(codeclr("vertices")).
+        and $(codeclr("nvertices")).
         """
     ))
 end
 
 """
-    FreeCat(vertices, arrows)
+    FreeCat(n, arrows = ())
 
 The free category on a finite graph, used as the shape of a diagram. Its
-objects are the `vertices`, a collection of `Symbol`s, written `J[:X]`. Its
-morphisms are the paths along its `arrows`, given as `label => (source =>
-target)` pairs, e.g.
+objects are the vertices `1:n`, written `J[i]`. Its morphisms are the paths
+along its `arrows`, a tuple of `source => target` pairs, arrow `k` being
+`arrows[k]`, e.g.
 
 ```julia
-J = FreeCat((:X, :Y), (f = :X => :Y, g = :X => :Y))
+J = FreeCat(2, (1 => 2, 1 => 2))
 ```
 
 # Standardized Interface
-- `generator(J, :f)` — the arrow `f` as a morphism
-- `compose(q, p)`, `id(J[:X])` — joining paths, and the empty path
+- `generator(J, k)` — the arrow `k` as a morphism
+- `compose(q, p)`, `id(J[i])` — joining paths, and the empty path
 - `discreteShape`, `emptyShape`, `parallelPairShape`, `cospanShape`,
   `spanShape` — common shapes
 
@@ -66,76 +74,61 @@ J = FreeCat((:X, :Y), (f = :X => :Y, g = :X => :Y))
 - `J :: FreeCat`; `p, q` are its morphisms
 """
 struct FreeCat <: Category
-    vertices::Tuple{Vararg{Symbol}}
-    arrows::NamedTuple
+    n::Int
+    arrows::Tuple{Vararg{Pair{Int, Int}}}
 
-    function FreeCat(vertices, arrows)
-        vertices = Tuple(vertices)
-        arrows = (; arrows...)
-
-        # vertices are distinct `Symbol`s
-        if !all(v -> v isa Symbol, vertices) || !allunique(vertices)
+    function FreeCat(n::Integer, arrows=())
+        # a number of vertices
+        if n < 0
             throw(ArgumentError(
                 @annotated """
-                The vertices of a free category must be distinct `Symbol`s, \
-                but they are
-                $TAB$(valclr(vertices)).
+                A free category must have a nonnegative number of vertices, \
+                but it is given $(valclr(n)).
                 """
             ))
         end
 
-        for (label, ends) in pairs(arrows)
+        for (k, ends) in enumerate(arrows)
             # arrows are `source => target` pairs
-            if !(ends isa Pair{Symbol, Symbol})
+            if !(ends isa Pair{<:Integer, <:Integer})
                 throw(ArgumentError(
                     @annotated """
-                    The arrow $(valclr(label)) of a free category must be \
-                    given as $(codeclr("source => target")), but it is
+                    The arrow $(valclr(k)) of a free category must be given \
+                    as $(codeclr("source => target")), but it is
                     $TAB$(valclr(ends)).
                     """
                 ))
             end
 
             # between vertices
-            if !(first(ends) in vertices && last(ends) in vertices)
+            if !(first(ends) in 1:n && last(ends) in 1:n)
                 throw(ArgumentError(
                     @annotated """
-                    The arrow $(valclr(label)) goes from \
-                    $(valclr(first(ends))) to $(valclr(last(ends))), which \
-                    are not both among the vertices
-                    $TAB$(valclr(vertices)).
-                    """
-                ))
-            end
-
-            # labeled apart from the vertices
-            if label in vertices
-                throw(ArgumentError(
-                    @annotated """
-                    The label $(valclr(label)) names both a vertex and an \
-                    arrow of the free category.
+                    The arrow $(valclr(k)) goes from $(valclr(first(ends))) \
+                    to $(valclr(last(ends))), which are not both among the \
+                    vertices $(valclr(1:n)).
                     """
                 ))
             end
         end
 
-        return new(vertices, arrows)
+        return new(n, Tuple(Int(first(e)) => Int(last(e)) for e in arrows))
     end
 end
 
 """
     GenericMorphFreeCat(path)
 
-A morphism of a [`FreeCat`](@ref): a path, given as the labels of its arrows in
-the order they are followed. The empty path is the identity.
+A morphism of a [`FreeCat`](@ref): a path, given as the indices of its arrows
+in the order they are followed. The empty path is the identity.
 """
 struct GenericMorphFreeCat
-    path::Tuple{Vararg{Symbol}}
+    path::Tuple{Vararg{Int}}
 end
 
 GenericMorphFreeCat(path::AbstractVector) = GenericMorphFreeCat(Tuple(path))
 
-vertices(J::FreeCat) = J.vertices
+nvertices(J::FreeCat) = J.n
 generators(J::FreeCat) = J.arrows
 
 # =========================================================
@@ -144,7 +137,7 @@ generators(J::FreeCat) = J.arrows
 
 function checkInCategory(obj, J::FreeCat)
     # a vertex
-    if !(obj isa Symbol && obj in J.vertices)
+    if !(obj isa Int && obj in vertices(J))
         throw(NotInCategory(obj, J,
             @annotated """
             The value
@@ -157,33 +150,33 @@ function checkInCategory(obj, J::FreeCat)
 end
 
 
-function checkInCategory(morph::GenericMorphFreeCat, H::Hom{Symbol, Symbol, FreeCat})
+function checkInCategory(morph::GenericMorphFreeCat, H::Hom{Int, Int, FreeCat})
     J = category(H)
     current = object(domain(H))
 
-    for label in morph.path
+    for k in morph.path
         # an arrow of `J`
-        if !haskey(J.arrows, label)
+        if !(k in eachindex(J.arrows))
             throw(NotInCategory(morph, H,
                 @annotated """
                 The path $(valclr(morph.path)) is not a morphism in $H, \
-                since $(valclr(label)) is not an arrow of $J.
+                since $(valclr(k)) is not an arrow of $J.
                 """
             ))
         end
 
         # which continues the path
-        if first(J.arrows[label]) != current
+        if first(J.arrows[k]) != current
             throw(NotInCategory(morph, H,
                 @annotated """
                 The path $(valclr(morph.path)) is not a morphism in $H, \
-                since the arrow $(valclr(label)) starts at \
-                $(valclr(first(J.arrows[label]))), not at $(valclr(current)), \
+                since the arrow $(valclr(k)) starts at \
+                $(valclr(first(J.arrows[k]))), not at $(valclr(current)), \
                 where the path so far ends.
                 """
             ))
         end
-        current = last(J.arrows[label])
+        current = last(J.arrows[k])
     end
 
     # ending at the codomain
@@ -207,37 +200,38 @@ end
 """
     H[path::Tuple, force=false]
 
-The path `path`, a tuple of arrow labels in the order they are followed, as a
-morphism in `H = Hom(J[:X], J[:Y])`, e.g. `Hom(J[:A], J[:C])[(:f, :g)]`; `()`
-is the identity.
+The path `path`, a tuple of arrow indices in the order they are followed, as a
+morphism in `H = Hom(J[i], J[j])`, e.g. `Hom(J[1], J[3])[(1, 2)]`; `()` is the
+identity.
 """
 function Base.getindex(
-    H::Hom{Symbol, Symbol, FreeCat}, path::Tuple{Vararg{Symbol}}; force::Bool=false
+    H::Hom{Int, Int, FreeCat}, path::Tuple{Vararg{Int}}; force::Bool=false
 )
     return H[GenericMorphFreeCat(path), force=force]
 end
 
 """
-    generator(J::FreeCat, label::Symbol)
+    generator(J::FreeCat, k::Int)
 
-The arrow `label` of `J`, as a morphism of `J`.
+The arrow `k` of `J`, as a morphism of `J`.
 """
-function generator(J::FreeCat, label::Symbol)
+function generator(J::FreeCat, k::Int)
     # an arrow of `J`
-    if !haskey(J.arrows, label)
+    if !(k in eachindex(J.arrows))
         throw(ArgumentError(
             @annotated """
-            $(valclr(label)) is not an arrow of $J.
+            $(valclr(k)) is not an arrow of $J, whose arrows are \
+            $(valclr(eachindex(J.arrows))).
             """
         ))
     end
-    source, target = J.arrows[label]
-    return Hom(J[source], J[target])[GenericMorphFreeCat((label,)), force=true]
+    source, target = J.arrows[k]
+    return Hom(J[source], J[target])[GenericMorphFreeCat((k,)), force=true]
 end
 
 function compose(
-    q::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}},
-    p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}
+    q::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}},
+    p::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}
 )
     P, Q = category(p), category(q)
 
@@ -261,77 +255,90 @@ function compose(
     ]
 end
 
-id(X::OIC{Symbol, FreeCat}) = Hom(X, X)[GenericMorphFreeCat(()), force=true]
+id(X::OIC{Int, FreeCat}) = Hom(X, X)[GenericMorphFreeCat(()), force=true]
 
 """
-    discreteShape(labels::Symbol...)
+    discreteShape(n)
 
-The free category with the vertices `labels` and no arrows, the shape of a
-product or coproduct.
+The free category with `n` vertices and no arrows, the shape of a product or
+coproduct of `n` objects.
 """
-discreteShape(labels::Symbol...) = FreeCat(labels, NamedTuple())
+discreteShape(n::Integer) = FreeCat(n)
 
 """
     Point
 
-The terminal category, the free category with the single vertex `:pt` and no
-arrows. Its only object is `Point[:pt]`, and its only morphism is
-`id(Point[:pt])`.
+The terminal category, the free category with a single vertex and no arrows.
+Its only object is `Point[1]`, and its only morphism is `id(Point[1])`.
 """
-const Point = FreeCat((:pt,), NamedTuple())
+const Point = FreeCat(1)
 
 """
     emptyShape()
 
 The free category with no vertices, the shape of a terminal or initial object.
 """
-emptyShape() = FreeCat((), NamedTuple())
+emptyShape() = FreeCat(0)
 
 """
     parallelPairShape()
 
-The free category on `f, g: X → Y`, the shape of an equalizer or coequalizer.
+The free category on two arrows `1 → 2`, the shape of an equalizer or
+coequalizer.
 """
-parallelPairShape() = FreeCat((:X, :Y), (f = :X => :Y, g = :X => :Y))
+parallelPairShape() = FreeCat(2, (1 => 2, 1 => 2))
 
 """
     cospanShape()
 
-The free category on `f: A → C` and `g: B → C`, the shape of a pullback.
+The free category on the arrows `1 → 3` and `2 → 3`, the shape of a pullback.
 """
-cospanShape() = FreeCat((:A, :B, :C), (f = :A => :C, g = :B => :C))
+cospanShape() = FreeCat(3, (1 => 3, 2 => 3))
 
 """
     spanShape()
 
-The free category on `f: C → A` and `g: C → B`, the shape of a pushout.
+The free category on the arrows `1 → 2` and `1 → 3`, the shape of a pushout.
 """
-spanShape() = FreeCat((:C, :A, :B), (f = :C => :A, g = :C => :B))
+spanShape() = FreeCat(3, (1 => 2, 1 => 3))
 
 # =========================================================
 # ======================= PRINTING ========================
 # =========================================================
 
 function name(J::FreeCat)
-    arrows = join(("$label: $(first(ends)) → $(last(ends))"
-        for (label, ends) in pairs(J.arrows)), ", ")
-    return "FreeCat($(join(J.vertices, ", "))$(isempty(arrows) ? "" : "; $arrows"))"
+    # arrow `k` prints as `s → t`, or `s →ₖ t` when another arrow is parallel
+    # to it, as its morphism does
+    arrows = join((count(==(ends), J.arrows) == 1 ?
+        "$(first(ends)) → $(last(ends))" :
+        "$(first(ends)) →$(join('₀' + d for d in reverse(digits(k)))) $(last(ends))"
+        for (k, ends) in enumerate(J.arrows)), ", ")
+    return "FreeCat($(J.n)$(isempty(arrows) ? "" : "; $arrows"))"
 end
 
-name(X::OIC{Symbol, FreeCat}) = string(object(X))
+name(X::OIC{Int, FreeCat}) = string(object(X))
 
-function name(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}})
+function name(p::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}})
     path = object(p).path
-    return isempty(path) ? "id" : join(reverse(path), "∘")
+    arrows = category(category(p)).arrows
+
+    # arrow `k` prints as `s → t`, or `s →ₖ t` when another arrow is parallel
+    # to it, and a composite as its arrows in parentheses, right to left
+    arrowName(k) = count(==(arrows[k]), arrows) == 1 ?
+        "$(first(arrows[k])) → $(last(arrows[k]))" :
+        "$(first(arrows[k])) →$(join('₀' + d for d in reverse(digits(k)))) $(last(arrows[k]))"
+    isempty(path) && return "id"
+    length(path) == 1 && return arrowName(only(path))
+    return join(("($(arrowName(k)))" for k in reverse(path)), " ∘ ")
 end
 
 # every path is monic and epic, since a free category cancels on both sides,
 # and only the empty paths are invertible
-isMono(::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}) = true
-isEpi(::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}) = true
-isIso(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}) = isempty(object(p).path)
+isMono(::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}) = true
+isEpi(::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}) = true
+isIso(p::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}) = isempty(object(p).path)
 
-function Base.inv(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}; force::Bool=false)
+function Base.inv(p::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}; force::Bool=false)
     # an identity, the only isomorphisms of a free category
     if !force && !isIso(p)
         throw(ArgumentError(
@@ -345,3 +352,18 @@ function Base.inv(p::OIC{GenericMorphFreeCat, <:Hom{Symbol, Symbol, FreeCat}}; f
     end
     return p
 end
+
+"""
+    firstDifference(p, q)
+
+For paths `p, q: X → Y` of a free category, `nothing` when they follow the same
+arrows, and otherwise `(path = (), left = p, right = q)`: paths have no
+elements to differ at, so they differ as a whole.
+"""
+function firstDifference(
+    p::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}},
+    q::OIC{GenericMorphFreeCat, <:Hom{Int, Int, FreeCat}}
+)
+    return object(p).path == object(q).path ? nothing : (path = (), left = p, right = q)
+end
+

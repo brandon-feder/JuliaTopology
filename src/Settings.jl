@@ -31,21 +31,3 @@ Set [`MAX_NAME_LENGTH`](@ref).
 function setMaxNameLength!(n::Int)
     global MAX_NAME_LENGTH = n
 end
-
-"""
-    MAX_SET_MAP_PAIRS_SHOWN = 3
-
-The most pairs of a map of finite sets listed in its name, e.g.
-`{1 ↦ :a, 2 ↦ :b, 3 ↦ :c, …}`, and the most elements listed in its error
-messages.
-"""
-MAX_SET_MAP_PAIRS_SHOWN::Int = 3
-
-"""
-    function setMaxSetMapPairsShown!(n::Int)
-
-Set [`MAX_SET_MAP_PAIRS_SHOWN`](@ref).
-"""
-function setMaxSetMapPairsShown!(n::Int)
-    global MAX_SET_MAP_PAIRS_SHOWN = n
-end
